@@ -64,7 +64,7 @@ function StatCard({
     <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-white/5 border border-white/10 px-3 py-4 flex-1 min-w-0">
       <Icon className="w-5 h-5 text-gold mb-0.5" />
       <span className="text-base font-bold tracking-tight">{value}</span>
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground text-center leading-tight">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-white text-center leading-tight">
         {label}
       </span>
     </div>
