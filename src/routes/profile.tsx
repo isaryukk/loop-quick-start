@@ -100,8 +100,8 @@ function BadgeCard({
       )}
       <span
         className={[
-          "text-[10px] font-medium text-center leading-tight",
-          locked ? "text-muted-foreground/30" : "text-foreground/80",
+          "text-[11px] font-bold text-center leading-tight",
+          locked ? "text-white/60" : "text-white",
         ].join(" ")}
       >
         {name}
