@@ -187,7 +187,7 @@ function ProfileScreen() {
 
         {/* Badges Section */}
         <div className="mb-8">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-white mb-3">
             Badges
           </h2>
           <div className="flex flex-wrap gap-2">
