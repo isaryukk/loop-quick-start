@@ -202,7 +202,7 @@ function ProfileScreen() {
 
         {/* Recent Activity */}
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-white mb-3">
             Recent Activity
           </h2>
           <div className="flex flex-col gap-2">
