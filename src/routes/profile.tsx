@@ -125,8 +125,8 @@ function ActivityRow({
         <ClipboardCheck className="w-4 h-4 text-gold" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold truncate">{topic} Quiz</p>
-        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+        <p className="text-sm font-bold truncate text-white">{topic} Quiz</p>
+        <p className="text-xs font-semibold text-white/85 flex items-center gap-1 mt-0.5">
           <CalendarDays className="w-3 h-3" />
           {date}
         </p>
