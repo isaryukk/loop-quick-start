@@ -64,7 +64,7 @@ function StatCard({
     <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-white/5 border border-white/10 px-3 py-4 flex-1 min-w-0">
       <Icon className="w-5 h-5 text-gold mb-0.5" />
       <span className="text-base font-bold tracking-tight">{value}</span>
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground text-center leading-tight">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-white text-center leading-tight">
         {label}
       </span>
     </div>
@@ -100,8 +100,8 @@ function BadgeCard({
       )}
       <span
         className={[
-          "text-[10px] font-medium text-center leading-tight",
-          locked ? "text-muted-foreground/30" : "text-foreground/80",
+          "text-[11px] font-bold text-center leading-tight",
+          locked ? "text-white/60" : "text-white",
         ].join(" ")}
       >
         {name}
@@ -125,8 +125,8 @@ function ActivityRow({
         <ClipboardCheck className="w-4 h-4 text-gold" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold truncate">{topic} Quiz</p>
-        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+        <p className="text-sm font-bold truncate text-white">{topic} Quiz</p>
+        <p className="text-xs font-semibold text-white/85 flex items-center gap-1 mt-0.5">
           <CalendarDays className="w-3 h-3" />
           {date}
         </p>
@@ -148,7 +148,7 @@ function ProfileScreen() {
         <div className="flex items-center justify-between mb-6">
           <button
             type="button"
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1 text-sm font-bold text-white hover:opacity-80 transition-opacity"
           >
             <ChevronLeft className="w-5 h-5" />
             Back
@@ -171,7 +171,7 @@ function ProfileScreen() {
               <Award className="w-3.5 h-3.5 text-gold" />
             </div>
           </div>
-          <h1 className="text-xl font-bold tracking-tight">Alex M.</h1>
+          <h1 className="text-xl font-black tracking-tight text-white">Alex M.</h1>
           <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-gold/10 border border-gold/20 px-3 py-1">
             <span className="w-1.5 h-1.5 rounded-full bg-gold" />
             <span className="text-xs font-semibold text-gold">Level 4 — Analyst</span>
@@ -187,7 +187,7 @@ function ProfileScreen() {
 
         {/* Badges Section */}
         <div className="mb-8">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-white mb-3">
             Badges
           </h2>
           <div className="flex flex-wrap gap-2">
@@ -202,7 +202,7 @@ function ProfileScreen() {
 
         {/* Recent Activity */}
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-white mb-3">
             Recent Activity
           </h2>
           <div className="flex flex-col gap-2">
