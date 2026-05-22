@@ -171,7 +171,7 @@ function ProfileScreen() {
               <Award className="w-3.5 h-3.5 text-gold" />
             </div>
           </div>
-          <h1 className="text-xl font-bold tracking-tight">Alex M.</h1>
+          <h1 className="text-xl font-black tracking-tight text-white">Alex M.</h1>
           <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-gold/10 border border-gold/20 px-3 py-1">
             <span className="w-1.5 h-1.5 rounded-full bg-gold" />
             <span className="text-xs font-semibold text-gold">Level 4 — Analyst</span>
