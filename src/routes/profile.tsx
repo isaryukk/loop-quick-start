@@ -148,7 +148,7 @@ function ProfileScreen() {
         <div className="flex items-center justify-between mb-6">
           <button
             type="button"
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1 text-sm font-bold text-white hover:opacity-80 transition-opacity"
           >
             <ChevronLeft className="w-5 h-5" />
             Back
