@@ -34,6 +34,8 @@ function AppleIcon() {
 }
 
 function Index() {
+  const navigate = useNavigate();
+  const goHome = () => navigate({ to: "/home" });
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-between overflow-hidden bg-background px-6 pb-10 pt-20 text-foreground">
       <div
