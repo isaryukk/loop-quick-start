@@ -66,6 +66,7 @@ function Index() {
       <div className="relative flex w-full max-w-sm flex-col items-center gap-3">
         <button
           type="button"
+          onClick={goHome}
           className="flex w-full items-center justify-center gap-3 rounded-full border border-white/20 bg-transparent px-5 py-3.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5"
         >
           <GoogleIcon />
@@ -73,6 +74,7 @@ function Index() {
         </button>
         <button
           type="button"
+          onClick={goHome}
           className="flex w-full items-center justify-center gap-3 rounded-full border border-white/20 bg-transparent px-5 py-3.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5"
         >
           <AppleIcon />
@@ -80,6 +82,7 @@ function Index() {
         </button>
         <button
           type="button"
+          onClick={goHome}
           className="mt-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           Continue as Guest
