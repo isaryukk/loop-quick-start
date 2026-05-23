@@ -180,10 +180,10 @@ function QuizResultsScreen() {
           <span className="text-xl font-bold text-gold">+50 XP</span>
         </div>
 
-        {/* Streak */}
+        {/* Loop */}
         <div className="mb-8 text-center">
           <p className="text-3xl font-bold tracking-tight">
-            <span className="mr-1">🔥</span>5 Day Streak!
+            <span className="mr-1">🔥</span>5 Day Loop!
           </p>
           <p className="text-sm text-muted-foreground mt-1">Keep it going — you're on fire.</p>
         </div>
@@ -191,7 +191,7 @@ function QuizResultsScreen() {
         {/* Stats */}
         <div className="flex gap-3 w-full mb-10">
           <StatPill icon={Target} label="Accuracy" value="80%" />
-          <StatPill icon={TrendingUp} label="Best Streak" value="7" />
+          <StatPill icon={TrendingUp} label="Best Loop" value="7" />
           <StatPill icon={Trophy} label="Rank" value="#142" />
         </div>
 

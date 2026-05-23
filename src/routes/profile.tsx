@@ -27,13 +27,13 @@ export const Route = createFileRoute("/profile")({
 /* ─── Data ─── */
 const STATS = [
   { label: "Total XP", value: "2,340", icon: TrendingUp },
-  { label: "Current Streak", value: "12 days", icon: Flame },
+  { label: "Current Loop", value: "12 days", icon: Flame },
   { label: "Quizzes Done", value: "47", icon: ClipboardCheck },
 ];
 
 const EARNED_BADGES = [
   { name: "Historian", icon: Award, color: "text-gold", bg: "bg-gold/10 border-gold/20" },
-  { name: "5-Day Streak", icon: Flame, color: "text-orange-400", bg: "bg-orange-400/10 border-orange-400/20" },
+  { name: "5-Day Loop", icon: Flame, color: "text-orange-400", bg: "bg-orange-400/10 border-orange-400/20" },
   { name: "Political Observer", icon: Star, color: "text-blue-400", bg: "bg-blue-400/10 border-blue-400/20" },
   { name: "Open-Minded", icon: Zap, color: "text-emerald-400", bg: "bg-emerald-400/10 border-emerald-400/20" },
 ];
