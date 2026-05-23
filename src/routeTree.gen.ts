@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as QuizResultsRouteImport } from './routes/quiz-results'
 import { Route as QuizRouteImport } from './routes/quiz'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as HomeRouteImport } from './routes/home'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -30,6 +31,11 @@ const ProfileRoute = ProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HistoryRoute = HistoryRouteImport.update({
   id: '/history',
   path: '/history',
@@ -44,6 +50,7 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/home': typeof HomeRoute
   '/profile': typeof ProfileRoute
   '/quiz': typeof QuizRoute
   '/quiz-results': typeof QuizResultsRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/home': typeof HomeRoute
   '/profile': typeof ProfileRoute
   '/quiz': typeof QuizRoute
   '/quiz-results': typeof QuizResultsRoute
@@ -59,21 +67,30 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/home': typeof HomeRoute
   '/profile': typeof ProfileRoute
   '/quiz': typeof QuizRoute
   '/quiz-results': typeof QuizResultsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/history' | '/profile' | '/quiz' | '/quiz-results'
+  fullPaths: '/' | '/history' | '/home' | '/profile' | '/quiz' | '/quiz-results'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/history' | '/profile' | '/quiz' | '/quiz-results'
-  id: '__root__' | '/' | '/history' | '/profile' | '/quiz' | '/quiz-results'
+  to: '/' | '/history' | '/home' | '/profile' | '/quiz' | '/quiz-results'
+  id:
+    | '__root__'
+    | '/'
+    | '/history'
+    | '/home'
+    | '/profile'
+    | '/quiz'
+    | '/quiz-results'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HistoryRoute: typeof HistoryRoute
+  HomeRoute: typeof HomeRoute
   ProfileRoute: typeof ProfileRoute
   QuizRoute: typeof QuizRoute
   QuizResultsRoute: typeof QuizResultsRoute
@@ -102,6 +119,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/history': {
       id: '/history'
       path: '/history'
@@ -122,6 +146,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HistoryRoute: HistoryRoute,
+  HomeRoute: HomeRoute,
   ProfileRoute: ProfileRoute,
   QuizRoute: QuizRoute,
   QuizResultsRoute: QuizResultsRoute,

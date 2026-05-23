@@ -43,7 +43,7 @@ function QuizScreen() {
           </div>
           <div className="flex items-center gap-1.5 text-sm font-medium">
             <Flame className="w-4 h-4 text-orange-400 fill-orange-400/30" />
-            <span>4 day streak</span>
+            <span>4 day loop</span>
           </div>
         </div>
 
