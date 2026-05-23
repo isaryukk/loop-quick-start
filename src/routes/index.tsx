@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -34,6 +34,8 @@ function AppleIcon() {
 }
 
 function Index() {
+  const navigate = useNavigate();
+  const goHome = () => navigate({ to: "/home" });
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-between overflow-hidden bg-background px-6 pb-10 pt-20 text-foreground">
       <div
@@ -64,6 +66,7 @@ function Index() {
       <div className="relative flex w-full max-w-sm flex-col items-center gap-3">
         <button
           type="button"
+          onClick={goHome}
           className="flex w-full items-center justify-center gap-3 rounded-full border border-white/20 bg-transparent px-5 py-3.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5"
         >
           <GoogleIcon />
@@ -71,6 +74,7 @@ function Index() {
         </button>
         <button
           type="button"
+          onClick={goHome}
           className="flex w-full items-center justify-center gap-3 rounded-full border border-white/20 bg-transparent px-5 py-3.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5"
         >
           <AppleIcon />
@@ -78,6 +82,7 @@ function Index() {
         </button>
         <button
           type="button"
+          onClick={goHome}
           className="mt-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           Continue as Guest
