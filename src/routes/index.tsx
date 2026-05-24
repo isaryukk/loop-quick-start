@@ -4,7 +4,7 @@ export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "CivicLoop — Understand the world in 5 minutes a day" },
+      { title: "CivicLoop â€” Understand the world in 5 minutes a day" },
       {
         name: "description",
         content:
@@ -27,7 +27,11 @@ function GoogleIcon() {
 
 function AppleIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5 fill-current"
+      aria-hidden="true"
+    >
       <path d="M16.36 12.6c-.02-2.27 1.85-3.36 1.94-3.42-1.06-1.55-2.71-1.76-3.3-1.79-1.4-.14-2.74.83-3.46.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.75 2.28-1.6 2.78-.41 6.89 1.15 9.15.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.59-.74 2.98-.74 1.39 0 1.78.74 3 .72 1.24-.02 2.02-1.12 2.78-2.23.88-1.28 1.24-2.52 1.26-2.58-.03-.01-2.42-.93-2.46-3.72zM14.07 5.9c.63-.77 1.06-1.83.94-2.9-.91.04-2.02.61-2.68 1.37-.59.68-1.11 1.78-.97 2.82 1.02.08 2.07-.52 2.71-1.29z" />
     </svg>
   );
@@ -35,7 +39,11 @@ function AppleIcon() {
 
 function Index() {
   const navigate = useNavigate();
-  const goHome = () => navigate({ to: "/home" });
+
+  const handleSignIn = () => {
+    navigate({ to: "/home" });
+  };
+
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-between overflow-hidden bg-background px-6 pb-10 pt-20 text-foreground">
       <div
@@ -66,7 +74,7 @@ function Index() {
       <div className="relative flex w-full max-w-sm flex-col items-center gap-3">
         <button
           type="button"
-          onClick={goHome}
+          onClick={handleSignIn}
           className="flex w-full items-center justify-center gap-3 rounded-full border border-white/20 bg-transparent px-5 py-3.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5"
         >
           <GoogleIcon />
@@ -74,7 +82,7 @@ function Index() {
         </button>
         <button
           type="button"
-          onClick={goHome}
+          onClick={handleSignIn}
           className="flex w-full items-center justify-center gap-3 rounded-full border border-white/20 bg-transparent px-5 py-3.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5"
         >
           <AppleIcon />
@@ -82,7 +90,7 @@ function Index() {
         </button>
         <button
           type="button"
-          onClick={goHome}
+          onClick={handleSignIn}
           className="mt-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           Continue as Guest
@@ -95,3 +103,5 @@ function Index() {
     </main>
   );
 }
+
+
