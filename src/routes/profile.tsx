@@ -1,217 +1,214 @@
-import { createFileRoute } from "@tanstack/react-router";
-import {
-  ChevronLeft,
-  Award,
-  Medal,
-  Star,
-  Zap,
-  Lock,
-  Flame,
-  TrendingUp,
-  ClipboardCheck,
-  CalendarDays,
-  ChevronRight,
-  Settings,
-} from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import { Home, BookOpen, ArrowLeftRight, User } from "lucide-react";
 
 export const Route = createFileRoute("/profile")({
-  component: ProfileScreen,
+  component: ProfilePage,
   head: () => ({
-    meta: [
-      { title: "Profile — CivicLoop" },
-      { name: "description", content: "Your CivicLoop profile, stats, and achievements." },
-    ],
+    meta: [{ title: "CivicLoop — Profile" }],
   }),
 });
 
-/* ─── Data ─── */
-const STATS = [
-  { label: "Total XP", value: "2,340", icon: TrendingUp },
-  { label: "Current Loop", value: "12 days", icon: Flame },
-  { label: "Quizzes Done", value: "47", icon: ClipboardCheck },
-];
-
-const EARNED_BADGES = [
-  { name: "Historian", icon: Award, color: "text-gold", bg: "bg-gold/10 border-gold/20" },
-  { name: "5-Day Loop", icon: Flame, color: "text-orange-400", bg: "bg-orange-400/10 border-orange-400/20" },
-  { name: "Political Observer", icon: Star, color: "text-blue-400", bg: "bg-blue-400/10 border-blue-400/20" },
-  { name: "Open-Minded", icon: Zap, color: "text-emerald-400", bg: "bg-emerald-400/10 border-emerald-400/20" },
-];
-
-const LOCKED_BADGES = [
-  { name: "Weekly Warrior", icon: Medal },
-  { name: "Century Club", icon: Award },
-  { name: "Debate Champion", icon: Star },
-];
-
-const ACTIVITY = [
-  { topic: "World News", score: "4 / 5", date: "May 22, 2026" },
-  { topic: "History", score: "5 / 5", date: "May 21, 2026" },
-  { topic: "Economics", score: "3 / 5", date: "May 20, 2026" },
-];
-
-/* ─── Sub-components ─── */
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-white/5 border border-white/10 px-3 py-4 flex-1 min-w-0">
-      <Icon className="w-5 h-5 text-gold mb-0.5" />
-      <span className="text-base font-bold tracking-tight">{value}</span>
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-white text-center leading-tight">
-        {label}
-      </span>
-    </div>
-  );
+function getLevel(xp: number): string {
+  if (xp >= 2000) return "Strategist";
+  if (xp >= 1000) return "Scholar";
+  if (xp >= 500) return "Analyst";
+  if (xp >= 200) return "Researcher";
+  return "Observer";
 }
 
-function BadgeCard({
-  name,
-  icon: Icon,
-  color,
-  bg,
-  locked = false,
-}: {
-  name: string;
-  icon: React.ComponentType<{ className?: string }>;
-  color?: string;
-  bg?: string;
-  locked?: boolean;
-}) {
-  return (
-    <div
-      className={[
-        "flex flex-col items-center gap-2 rounded-xl border px-3 py-4 min-w-[72px] flex-1",
-        locked
-          ? "bg-white/[0.03] border-white/5 text-muted-foreground/40"
-          : `${bg} ${color}`,
-      ].join(" ")}
-    >
-      {locked ? (
-        <Lock className="w-6 h-6" />
-      ) : (
-        <Icon className="w-6 h-6" />
-      )}
-      <span
-        className={[
-          "text-[11px] font-bold text-center leading-tight",
-          locked ? "text-white/60" : "text-white",
-        ].join(" ")}
-      >
-        {name}
-      </span>
-    </div>
-  );
+function getNextLevel(xp: number): { name: string; xpNeeded: number } {
+  if (xp < 200) return { name: "Researcher", xpNeeded: 200 };
+  if (xp < 500) return { name: "Analyst", xpNeeded: 500 };
+  if (xp < 1000) return { name: "Scholar", xpNeeded: 1000 };
+  if (xp < 2000) return { name: "Strategist", xpNeeded: 2000 };
+  return { name: "Max Level", xpNeeded: 2000 };
 }
 
-function ActivityRow({
-  topic,
-  score,
-  date,
-}: {
-  topic: string;
-  score: string;
-  date: string;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-4 py-3">
-      <div className="flex items-center justify-center w-9 h-9 rounded-full bg-white/10 shrink-0">
-        <ClipboardCheck className="w-4 h-4 text-gold" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold truncate text-white">{topic} Quiz</p>
-        <p className="text-xs font-semibold text-white/85 flex items-center gap-1 mt-0.5">
-          <CalendarDays className="w-3 h-3" />
-          {date}
-        </p>
-      </div>
-      <div className="text-right">
-        <p className="text-sm font-bold text-gold">{score}</p>
-        <ChevronRight className="w-4 h-4 text-muted-foreground/40 ml-auto mt-0.5" />
-      </div>
-    </div>
-  );
-}
+const badges = [
+  { id: 1, emoji: "🔥", label: "5-Day Streak", earned: true },
+  { id: 2, emoji: "📰", label: "News Watcher", earned: true },
+  { id: 3, emoji: "🏛️", label: "Historian", earned: false },
+  { id: 4, emoji: "🤔", label: "Open-Minded", earned: false },
+  { id: 5, emoji: "⭐", label: "Perfect Score", earned: false },
+  { id: 6, emoji: "🌍", label: "Global Citizen", earned: false },
+];
 
-/* ─── Main Screen ─── */
-function ProfileScreen() {
+function ProfilePage() {
+  const [xp, setXp] = useState(0);
+  const [streak, setStreak] = useState(0);
+
+  useEffect(() => {
+    setXp(parseInt(localStorage.getItem("civicloop_xp") || "0"));
+    setStreak(parseInt(localStorage.getItem("civicloop_streak") || "0"));
+  }, []);
+
+  const level = getLevel(xp);
+  const nextLevel = getNextLevel(xp);
+  const progressToNext = Math.min((xp / nextLevel.xpNeeded) * 100, 100);
+
   return (
-    <div className="min-h-screen bg-background text-foreground flex justify-center">
-      <div className="w-full max-w-md flex flex-col px-5 pt-6 pb-10">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <button
-            type="button"
-            className="flex items-center gap-1 text-sm font-bold text-white hover:opacity-80 transition-opacity"
+    <main className="relative flex min-h-screen flex-col bg-background pb-24 text-foreground">
+      {/* Pink radial glow */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full opacity-25 blur-3xl"
+        style={{
+          background:
+            "radial-gradient(circle, oklch(0.72 0.18 350) 0%, transparent 70%)",
+        }}
+      />
+
+      <div className="relative px-6 pt-14">
+        {/* Avatar + name */}
+        <div className="mb-8 flex flex-col items-center text-center">
+          <div
+            className="mb-4 flex h-20 w-20 items-center justify-center rounded-full border-2 text-2xl font-bold"
+            style={{
+              background: "oklch(0.72 0.18 350 / 0.15)",
+              borderColor: "oklch(0.72 0.18 350 / 0.4)",
+              color: "oklch(0.78 0.18 350)",
+            }}
           >
-            <ChevronLeft className="w-5 h-5" />
-            Back
-          </button>
-          <button
-            type="button"
-            className="p-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-          >
-            <Settings className="w-4 h-4 text-muted-foreground" />
-          </button>
-        </div>
-
-        {/* Profile Header */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="relative mb-3">
-            <div className="w-20 h-20 rounded-full bg-gold/20 border-2 border-gold/40 flex items-center justify-center text-2xl font-bold text-gold">
-              AM
-            </div>
-            <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-background border border-white/10 flex items-center justify-center">
-              <Award className="w-3.5 h-3.5 text-gold" />
-            </div>
+            AL
           </div>
-          <h1 className="text-xl font-black tracking-tight text-white">Alex M.</h1>
-          <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-gold/10 border border-gold/20 px-3 py-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-gold" />
-            <span className="text-xs font-semibold text-gold">Level 4 — Analyst</span>
+          <h1 className="text-xl font-bold">Alex</h1>
+          <div className="mt-1 flex items-center gap-2">
+            <span
+              className="rounded-full border px-3 py-0.5 text-xs font-medium"
+              style={{
+                color: "oklch(0.78 0.18 350)",
+                background: "oklch(0.72 0.18 350 / 0.1)",
+                borderColor: "oklch(0.72 0.18 350 / 0.25)",
+              }}
+            >
+              {level}
+            </span>
           </div>
         </div>
 
-        {/* Stats Row */}
-        <div className="flex gap-3 mb-8">
-          {STATS.map((s) => (
-            <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} />
+        {/* Stats row */}
+        <div className="mb-4 grid grid-cols-3 gap-3">
+          {[
+            { label: "Total XP", value: xp.toLocaleString() },
+            { label: "Day Streak", value: `${streak} 🔥` },
+            { label: "Quizzes", value: streak.toString() },
+          ].map(({ label, value }) => (
+            <div
+              key={label}
+              className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center"
+            >
+              <p className="text-lg font-bold text-foreground">{value}</p>
+              <p className="text-[10px] text-muted-foreground">{label}</p>
+            </div>
           ))}
         </div>
 
-        {/* Badges Section */}
-        <div className="mb-8">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-white mb-3">
+        {/* XP progress bar */}
+        <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              Progress to {nextLevel.name}
+            </span>
+            <span
+              className="text-xs font-medium"
+              style={{ color: "oklch(0.78 0.18 350)" }}
+            >
+              {xp} / {nextLevel.xpNeeded} XP
+            </span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-white/10">
+            <div
+              className="h-2 rounded-full transition-all duration-500"
+              style={{
+                width: `${progressToNext}%`,
+                background: "oklch(0.72 0.18 350)",
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Badges */}
+        <div className="mb-6">
+          <h2 className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
             Badges
           </h2>
-          <div className="flex flex-wrap gap-2">
-            {EARNED_BADGES.map((b) => (
-              <BadgeCard key={b.name} name={b.name} icon={b.icon} color={b.color} bg={b.bg} />
-            ))}
-            {LOCKED_BADGES.map((b) => (
-              <BadgeCard key={b.name} name={b.name} icon={b.icon} locked />
+          <div className="grid grid-cols-3 gap-3">
+            {badges.map((badge) => (
+              <div
+                key={badge.id}
+                className={`flex flex-col items-center rounded-2xl border p-3 text-center transition-all ${
+                  badge.earned
+                    ? "border-white/15 bg-white/8"
+                    : "border-white/8 bg-white/3 opacity-40"
+                }`}
+              >
+                <span className={`text-2xl ${!badge.earned ? "grayscale" : ""}`}>
+                  {badge.emoji}
+                </span>
+                <span className="mt-1.5 text-[10px] leading-tight text-muted-foreground">
+                  {badge.label}
+                </span>
+              </div>
             ))}
           </div>
         </div>
 
-        {/* Recent Activity */}
-        <div>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-white mb-3">
-            Recent Activity
+        {/* Levels reference */}
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <h2 className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Level Ladder
           </h2>
-          <div className="flex flex-col gap-2">
-            {ACTIVITY.map((a) => (
-              <ActivityRow key={`${a.topic}-${a.date}`} topic={a.topic} score={a.score} date={a.date} />
-            ))}
-          </div>
+          {[
+            { name: "Observer", xp: "0–199 XP" },
+            { name: "Researcher", xp: "200–499 XP" },
+            { name: "Analyst", xp: "500–999 XP" },
+            { name: "Scholar", xp: "1,000–1,999 XP" },
+            { name: "Strategist", xp: "2,000+ XP" },
+          ].map(({ name, xp: xpRange }) => (
+            <div
+              key={name}
+              className={`flex items-center justify-between py-2 ${
+                name === level ? "font-semibold" : ""
+              }`}
+            >
+              <span
+                className="text-sm"
+                style={
+                  name === level
+                    ? { color: "oklch(0.78 0.18 350)" }
+                    : undefined
+                }
+              >
+                {name === level ? "→ " : ""}{name}
+              </span>
+              <span className="text-xs text-muted-foreground">{xpRange}</span>
+            </div>
+          ))}
         </div>
       </div>
-    </div>
+
+      {/* Bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 flex items-center justify-around border-t border-white/10 bg-background pb-6 pt-3">
+        <Link to="/home" className="flex flex-col items-center gap-1">
+          <Home className="h-5 w-5 text-muted-foreground" />
+          <span className="text-[10px] text-muted-foreground">Home</span>
+        </Link>
+        <Link to="/history" className="flex flex-col items-center gap-1">
+          <BookOpen className="h-5 w-5 text-muted-foreground" />
+          <span className="text-[10px] text-muted-foreground">History</span>
+        </Link>
+        <Link to="/swipe-decision" className="flex flex-col items-center gap-1">
+          <ArrowLeftRight className="h-5 w-5 text-muted-foreground" />
+          <span className="text-[10px] text-muted-foreground">Decide</span>
+        </Link>
+        <Link to="/profile" className="flex flex-col items-center gap-1">
+          <User className="h-5 w-5" style={{ color: "oklch(0.78 0.18 350)" }} />
+          <span className="text-[10px] font-medium" style={{ color: "oklch(0.78 0.18 350)" }}>
+            Profile
+          </span>
+        </Link>
+      </nav>
+    </main>
   );
 }
