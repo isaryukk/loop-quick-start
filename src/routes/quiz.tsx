@@ -9,7 +9,7 @@ export const Route = createFileRoute("/quiz")({
   component: QuizPage,
   head: () => ({ meta: [{ title: "CivicLoop — Daily Quiz" }] }),
 });
-
+  
 type Question = {
   text: string;
   options: string[];
