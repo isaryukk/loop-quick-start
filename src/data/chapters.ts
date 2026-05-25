@@ -8,7 +8,13 @@ export type Chapter = {
   xpReward: number;
 
   description: string;
-  learn: string;
+
+  learn: {
+    core: string[];
+    key: string[];
+    analysis: string[];
+    stretch: string[];
+  };
 
   questions: {
     text: string;
@@ -47,7 +53,8 @@ export type Chapter = {
 };
 
 export const chapters: Chapter[] = [
-  /* ─────────────────────────────── CHAPTER 1 ─────────────────────────────── */
+
+  /* ───────────────────────── CHAPTER 1 ───────────────────────── */
   {
     id: 1,
     title: "Financial Collapse of France",
@@ -56,148 +63,137 @@ export const chapters: Chapter[] = [
     isUnlocked: true,
     isCompleted: false,
     xpReward: 120,
+    description: "Structural economic collapse driven by debt and inequality.",
 
-    description:
-      "France enters a deep financial and social crisis driven by debt, inequality, and food shortages.",
-
-    learn: `By 1788, France was not just in debt — it was structurally bankrupt.
-
-The monarchy had borrowed heavily to fund wars, especially the American Revolution. Interest payments alone consumed a massive portion of state revenue.
-
-Meanwhile, France’s taxation system was deeply unequal. The First Estate (clergy) and Second Estate (nobility) paid almost no taxes, while the Third Estate — over 95% of the population — carried the entire burden.
-
-Two consecutive harvest failures caused grain shortages. Bread prices tripled, and since bread made up most of the daily diet of ordinary people, starvation and unrest spread rapidly.
-
-King Louis XVI lacked political authority and decisiveness. His attempts at reform were blocked by elites, leaving the system unable to adapt.
-
-This combination of debt, inequality, and food crisis created the perfect conditions for revolution.`,
+    learn: {
+      core: [
+        "France was in severe financial crisis by 1788 due to long-term war debt.",
+        "The taxation system was deeply unequal across social estates."
+      ],
+      key: [
+        "The Third Estate represented over 95% of the population but paid most taxes.",
+        "Bread prices increased sharply after harvest failures."
+      ],
+      analysis: [
+        "Economic inequality created systemic instability across French society.",
+        "Food shortages triggered widespread unrest and riots."
+      ],
+      stretch: [
+        "Failure of reform under absolutism intensified structural crisis.",
+        "Enlightenment ideas undermined legitimacy of monarchy."
+      ]
+    },
 
     questions: [
       {
-        text: "What was the main cause of France’s financial collapse?",
-        options: [
-          "Industrial decline",
-          "War debt and unfair taxation",
-          "Foreign invasion",
-          "Bank failure",
-        ],
+        text: "What was the main cause of France’s financial crisis?",
+        options: ["Industrial growth", "War debt and taxation inequality", "Foreign invasion", "Trade boom"],
         correct: 1,
-        explanation:
-          "France was crippled by war debt and a tax system that burdened only the poor.",
-      },
-      {
-        text: "Which group paid most taxes?",
-        options: ["Nobility", "Clergy", "Third Estate", "Royal family"],
-        correct: 2,
-        explanation:
-          "The Third Estate carried nearly all tax responsibility.",
-      },
+        explanation: "Debt from wars + unfair taxation caused collapse."
+      }
     ],
 
     orderingEvents: [
-      { id: 1, text: "War debt accumulates", correctIndex: 0 },
-      { id: 2, text: "Harvest failures", correctIndex: 1 },
+      { id: 1, text: "War debt builds", correctIndex: 0 },
+      { id: 2, text: "Harvest failure", correctIndex: 1 },
       { id: 3, text: "Bread prices rise", correctIndex: 2 },
-      { id: 4, text: "Urban unrest spreads", correctIndex: 3 },
-      { id: 5, text: "Political crisis begins", correctIndex: 4 },
+      { id: 4, text: "Riots begin", correctIndex: 3 },
+      { id: 5, text: "Political crisis", correctIndex: 4 }
     ],
 
     swipeScenario: {
       date: "1789",
-      situation: "Paris is starving and riots are forming.",
-      context: "You advise King Louis XVI on how to respond.",
+      situation: "Paris is starving.",
+      context: "King must respond.",
       leftChoice: "Raise Taxes",
       rightChoice: "Subsidise Grain",
 
       leftOutcome: {
-        title: "Taxation triggers revolt",
-        text: "Riots spread across Paris as resentment explodes.",
-        historical:
-          "This reflects real policies that accelerated the Revolution.",
-        reactions: [{ label: "Anger", color: "red" }],
+        title: "Revolt increases",
+        text: "Unrest spreads.",
+        historical: "Tax pressure accelerated revolution.",
+        reactions: [{ label: "Anger", color: "red" }]
       },
 
       rightOutcome: {
         title: "Temporary relief",
-        text: "Food stabilises briefly but debt worsens.",
-        historical:
-          "Short-term relief could not fix structural collapse.",
-        reactions: [{ label: "Short calm", color: "green" }],
-      },
-    },
+        text: "Food stabilises briefly.",
+        historical: "Debt crisis remains unsolved.",
+        reactions: [{ label: "Calm", color: "green" }]
+      }
+    }
   },
 
-  /* ─────────────────────────────── CHAPTER 2 ─────────────────────────────── */
+  /* ───────────────────────── CHAPTER 2 ───────────────────────── */
   {
     id: 2,
-    title: "The Estates-General Crisis",
+    title: "Estates-General Crisis",
     date: "May 1789",
     keyFigure: "Louis XVI",
     isUnlocked: false,
     isCompleted: false,
     xpReward: 140,
+    description: "Political breakdown between estates over representation.",
 
-    description:
-      "The king calls the Estates-General for the first time in over 150 years.",
-
-    learn: `The Estates-General was a political assembly representing the three estates of French society.
-
-It had not been convened since 1614, meaning there was no modern precedent for how it should function.
-
-The Third Estate demanded voting by population rather than by estate, because they represented the vast majority of the population.
-
-The nobility and clergy resisted, fearing loss of privilege and political control.
-
-This deadlock marked the first major political rupture between the monarchy and the people.`,
+    learn: {
+      core: [
+        "Estates-General was called in 1789 after 150+ years.",
+        "France was divided into three estates."
+      ],
+      key: [
+        "Voting was by estate, not population.",
+        "Third Estate demanded fair representation."
+      ],
+      analysis: [
+        "System gave minority groups disproportionate power.",
+        "Deadlock exposed structural inequality."
+      ],
+      stretch: [
+        "Ancien Régime legitimacy began collapsing."
+      ]
+    },
 
     questions: [
       {
-        text: "What was the main dispute in the Estates-General?",
-        options: [
-          "Tax levels",
-          "Voting system",
-          "Military power",
-          "Trade policy",
-        ],
+        text: "Main dispute in Estates-General?",
+        options: ["Taxation", "Voting system", "Trade", "War"],
         correct: 1,
-        explanation: "The key conflict was how voting should be structured.",
-      },
+        explanation: "Voting structure caused conflict."
+      }
     ],
 
     orderingEvents: [
-      { id: 1, text: "Estates-General summoned", correctIndex: 0 },
-      { id: 2, text: "Voting dispute begins", correctIndex: 1 },
-      { id: 3, text: "Third Estate protests", correctIndex: 2 },
-      { id: 4, text: "Deadlock forms", correctIndex: 3 },
-      { id: 5, text: "Breakdown of authority", correctIndex: 4 },
+      { id: 1, text: "Summoned", correctIndex: 0 },
+      { id: 2, text: "Voting dispute", correctIndex: 1 },
+      { id: 3, text: "Deadlock", correctIndex: 2 },
+      { id: 4, text: "Breakaway", correctIndex: 3 },
+      { id: 5, text: "Crisis deepens", correctIndex: 4 }
     ],
 
     swipeScenario: {
       date: "1789",
-      situation: "Voting system must be decided.",
-      context: "Three estates cannot agree on fair representation.",
+      situation: "Voting system debate.",
+      context: "Estates disagree.",
       leftChoice: "Vote by Estate",
       rightChoice: "Vote by Population",
 
       leftOutcome: {
-        title: "Elite control maintained",
-        text: "Nobility retains power.",
-        historical:
-          "This would preserve inequality and deepen unrest.",
-        reactions: [{ label: "Elite win", color: "green" }],
+        title: "Elite control",
+        text: "Privilege preserved.",
+        historical: "Maintained inequality.",
+        reactions: [{ label: "Status quo", color: "red" }]
       },
 
       rightOutcome: {
-        title: "Democratic shift begins",
-        text: "Third Estate gains real influence.",
-        historical:
-          "This leads toward formation of National Assembly.",
-        reactions: [{ label: "Change", color: "green" }],
-      },
-    },
+        title: "Representation shift",
+        text: "Power redistribution begins.",
+        historical: "Leads to National Assembly.",
+        reactions: [{ label: "Change", color: "green" }]
+      }
+    }
   },
 
-  /* ─────────────────────────────── CHAPTER 3 ─────────────────────────────── */
+  /* ───────────────────────── CHAPTER 3 ───────────────────────── */
   {
     id: 3,
     title: "Storming of the Bastille",
@@ -206,202 +202,205 @@ This deadlock marked the first major political rupture between the monarchy and 
     isUnlocked: false,
     isCompleted: false,
     xpReward: 160,
+    description: "Symbolic fall of royal authority in Paris.",
 
-    description:
-      "The Bastille prison is stormed, marking the symbolic start of the Revolution.",
-
-    learn: `On 14 July 1789, Parisian crowds stormed the Bastille fortress.
-
-Although it held few prisoners, it symbolised royal tyranny and arbitrary power.
-
-Tensions were driven by food shortages, fear of military repression, and political instability.
-
-The governor was killed and the fortress destroyed.
-
-This moment transformed unrest into full-scale revolution.`,
+    learn: {
+      core: [
+        "Bastille stormed on 14 July 1789.",
+        "It symbolised royal authority."
+      ],
+      key: [
+        "Crowds feared military repression.",
+        "Weapons and gunpowder stored inside."
+      ],
+      analysis: [
+        "Revolution shifted from political to violent phase.",
+        "Royal control in Paris collapsed."
+      ],
+      stretch: [
+        "Event triggered nationwide uprisings."
+      ]
+    },
 
     questions: [
       {
         text: "Why was the Bastille important?",
-        options: [
-          "Military base",
-          "Symbol of royal authority",
-          "Economic center",
-          "Religious site",
-        ],
+        options: ["Prison", "Symbol of monarchy", "Trade hub", "Church site"],
         correct: 1,
-        explanation:
-          "It represented royal imprisonment and state oppression.",
-      },
+        explanation: "It represented royal power."
+      }
     ],
 
     orderingEvents: [
-      { id: 1, text: "Crowds gather", correctIndex: 0 },
+      { id: 1, text: "Crowd gathers", correctIndex: 0 },
       { id: 2, text: "Weapons seized", correctIndex: 1 },
       { id: 3, text: "Attack begins", correctIndex: 2 },
-      { id: 4, text: "Governor killed", correctIndex: 3 },
-      { id: 5, text: "Symbol of revolution spreads", correctIndex: 4 },
+      { id: 4, text: "Fall of Bastille", correctIndex: 3 },
+      { id: 5, text: "Revolution spreads", correctIndex: 4 }
     ],
 
     swipeScenario: {
       date: "1789",
-      situation: "Crowds demand weapons from Bastille.",
-      context: "Paris is on the edge of collapse.",
-      leftChoice: "Defend fortress",
-      rightChoice: "Negotiate surrender",
+      situation: "Crowd demands weapons.",
+      context: "Paris unstable.",
+      leftChoice: "Defend Bastille",
+      rightChoice: "Surrender",
 
       leftOutcome: {
-        title: "Violent escalation",
-        text: "Bloodshed increases dramatically.",
-        historical:
-          "Resistance likely accelerates revolution.",
-        reactions: [{ label: "Violence", color: "red" }],
+        title: "Violence escalates",
+        text: "Bloodshed increases.",
+        historical: "Resistance strengthened revolution.",
+        reactions: [{ label: "Conflict", color: "red" }]
       },
 
       rightOutcome: {
         title: "Temporary calm",
-        text: "Conflict is delayed.",
-        historical:
-          "But revolution momentum remains unstoppable.",
-        reactions: [{ label: "Pause", color: "green" }],
-      },
-    },
+        text: "Conflict pauses.",
+        historical: "But revolution continues.",
+        reactions: [{ label: "Pause", color: "green" }]
+      }
+    }
   },
 
-  /* ─────────────────────────────── CHAPTER 4 ─────────────────────────────── */
+  /* ───────────────────────── CHAPTER 4 ───────────────────────── */
   {
     id: 4,
-    title: "Rise of the National Assembly",
+    title: "National Assembly",
     date: "1789",
     keyFigure: "Third Estate Leaders",
     isUnlocked: false,
     isCompleted: false,
     xpReward: 180,
+    description: "Third Estate declares itself national authority.",
 
-    description:
-      "The Third Estate declares itself the National Assembly.",
-
-    learn: `Frustrated by political deadlock, the Third Estate broke away and declared itself the National Assembly.
-
-This act directly challenged royal authority.
-
-Members swore the Tennis Court Oath, promising not to disband until France had a constitution.
-
-This was the first formal step toward ending absolute monarchy in France.`,
+    learn: {
+      core: [
+        "Third Estate declared National Assembly.",
+        "They rejected estate system."
+      ],
+      key: [
+        "Tennis Court Oath sworn.",
+        "Constitution demanded."
+      ],
+      analysis: [
+        "Sovereignty shifted from king to people.",
+        "Monarchy authority weakened."
+      ],
+      stretch: [
+        "Elite defections increased legitimacy."
+      ]
+    },
 
     questions: [
       {
-        text: "What was the Tennis Court Oath?",
-        options: [
-          "Military alliance",
-          "Pledge to create constitution",
-          "Tax agreement",
-          "War declaration",
-        ],
+        text: "What was Tennis Court Oath?",
+        options: ["Tax reform", "Constitution pledge", "War plan", "Treaty"],
         correct: 1,
-        explanation:
-          "They swore to remain united until a constitution was created.",
-      },
+        explanation: "They vowed to create constitution."
+      }
     ],
 
     orderingEvents: [
-      { id: 1, text: "Third Estate breaks away", correctIndex: 0 },
-      { id: 2, text: "National Assembly formed", correctIndex: 1 },
-      { id: 3, text: "Tennis Court Oath", correctIndex: 2 },
-      { id: 4, text: "King attempts control", correctIndex: 3 },
-      { id: 5, text: "Revolution escalates", correctIndex: 4 },
+      { id: 1, text: "Breakaway", correctIndex: 0 },
+      { id: 2, text: "Assembly formed", correctIndex: 1 },
+      { id: 3, text: "Oath", correctIndex: 2 },
+      { id: 4, text: "King reacts", correctIndex: 3 },
+      { id: 5, text: "Escalation", correctIndex: 4 }
     ],
 
     swipeScenario: {
       date: "1789",
-      situation: "Assembly demands constitutional reform.",
-      context: "The monarchy must decide how to respond.",
+      situation: "Reform demands rise.",
+      context: "Monarchy reacts.",
       leftChoice: "Dissolve Assembly",
-      rightChoice: "Recognise Assembly",
+      rightChoice: "Accept Assembly",
 
       leftOutcome: {
-        title: "Repression attempt",
-        text: "Tensions explode.",
-        historical:
-          "Would likely trigger further rebellion.",
-        reactions: [{ label: "Conflict", color: "red" }],
+        title: "Conflict rises",
+        text: "Revolution intensifies.",
+        historical: "Would escalate crisis.",
+        reactions: [{ label: "Tension", color: "red" }]
       },
 
       rightOutcome: {
-        title: "Power shift begins",
-        text: "Monarchy weakens politically.",
-        historical:
-          "Legitimises revolutionary authority.",
-        reactions: [{ label: "Shift", color: "green" }],
-      },
-    },
+        title: "Authority shifts",
+        text: "Monarchy weakens.",
+        historical: "Revolution legitimised.",
+        reactions: [{ label: "Shift", color: "green" }]
+      }
+    }
   },
 
-  /* ─────────────────────────────── CHAPTER 5 ─────────────────────────────── */
+  /* ───────────────────────── CHAPTER 5 ───────────────────────── */
   {
     id: 5,
-    title: "Reign of Terror Begins",
+    title: "Reign of Terror",
     date: "1793",
     keyFigure: "Robespierre",
     isUnlocked: false,
     isCompleted: false,
     xpReward: 200,
+    description: "Radical phase of revolutionary violence.",
 
-    description:
-      "Radical revolution leads to mass executions and political paranoia.",
-
-    learn: `During the Reign of Terror, revolutionary leaders used extreme measures to protect the revolution.
-
-Thousands were executed by guillotine under suspicion of being enemies of the state.
-
-Maximilien Robespierre justified violence as necessary to preserve the republic.
-
-Fear became a political tool used to maintain control.`,
+    learn: {
+      core: [
+        "Revolution enters radical phase.",
+        "Committee of Public Safety dominates."
+      ],
+      key: [
+        "Mass executions via guillotine.",
+        "Enemies of revolution targeted."
+      ],
+      analysis: [
+        "Fear used as political control tool.",
+        "Civil liberties suspended."
+      ],
+      stretch: [
+        "Robespierre justified violence morally."
+      ]
+    },
 
     questions: [
       {
-        text: "What was the main tool of the Reign of Terror?",
-        options: ["Democracy", "Fear and execution", "Trade reform", "Monarchy restoration"],
+        text: "Main feature of Reign of Terror?",
+        options: ["Peace", "Fear and execution", "Trade reform", "Democracy"],
         correct: 1,
-        explanation:
-          "Political fear and mass executions defined this period.",
-      },
+        explanation: "Mass executions defined the period."
+      }
     ],
 
     orderingEvents: [
-      { id: 1, text: "Committee of Public Safety formed", correctIndex: 0 },
-      { id: 2, text: "Mass arrests begin", correctIndex: 1 },
-      { id: 3, text: "Guillotine used widely", correctIndex: 2 },
-      { id: 4, text: "Robespierre rises", correctIndex: 3 },
-      { id: 5, text: "Terror peaks", correctIndex: 4 },
+      { id: 1, text: "Committee formed", correctIndex: 0 },
+      { id: 2, text: "Arrests increase", correctIndex: 1 },
+      { id: 3, text: "Executions rise", correctIndex: 2 },
+      { id: 4, text: "Terror peaks", correctIndex: 3 },
+      { id: 5, text: "Backlash begins", correctIndex: 4 }
     ],
 
     swipeScenario: {
       date: "1793",
-      situation: "Enemies of the revolution are increasing.",
-      context: "Leadership must decide how to maintain control.",
-      leftChoice: "Mass executions",
-      rightChoice: "Legal trials",
+      situation: "Enemies increasing.",
+      context: "Government response needed.",
+      leftChoice: "Execute suspects",
+      rightChoice: "Fair trials",
 
       leftOutcome: {
-        title: "Fear-based control",
-        text: "Order is maintained through terror.",
-        historical:
-          "This defines the Reign of Terror.",
-        reactions: [{ label: "Fear", color: "red" }],
+        title: "Fear control",
+        text: "Order enforced.",
+        historical: "Defines Terror.",
+        reactions: [{ label: "Fear", color: "red" }]
       },
 
       rightOutcome: {
-        title: "Slower justice",
-        text: "Stability weakens short-term.",
-        historical:
-          "Seen as too slow during crisis.",
-        reactions: [{ label: "Delay", color: "gray" }],
-      },
-    },
+        title: "Slow justice",
+        text: "Less efficient.",
+        historical: "Seen as weak during crisis.",
+        reactions: [{ label: "Delay", color: "gray" }]
+      }
+    }
   },
 
-  /* ─────────────────────────────── CHAPTER 6 ─────────────────────────────── */
+  /* ───────────────────────── CHAPTER 6 ───────────────────────── */
   {
     id: 6,
     title: "Execution of Louis XVI",
@@ -410,62 +409,67 @@ Fear became a political tool used to maintain control.`,
     isUnlocked: false,
     isCompleted: false,
     xpReward: 220,
+    description: "End of monarchy in France.",
 
-    description:
-      "The king is executed, ending monarchy in France.",
-
-    learn: `Louis XVI was executed in January 1793 after being convicted of treason.
-
-His death marked the official end of absolute monarchy in France.
-
-The execution shocked Europe and intensified foreign opposition to the revolution.
-
-Internally, it deepened divisions and accelerated radicalisation.`,
+    learn: {
+      core: [
+        "Louis XVI executed in 1793.",
+        "Monarchy abolished."
+      ],
+      key: [
+        "Convicted of treason.",
+        "Europe reacts strongly."
+      ],
+      analysis: [
+        "Revolution becomes irreversible.",
+        "Internal divisions deepen."
+      ],
+      stretch: [
+        "Radicalisation accelerates across Europe."
+      ]
+    },
 
     questions: [
       {
         text: "Why was Louis XVI executed?",
-        options: ["Tax fraud", "Treason", "Military failure", "Religious dispute"],
+        options: ["Tax fraud", "Treason", "War loss", "Religious conflict"],
         correct: 1,
-        explanation:
-          "He was convicted of treason against the revolutionary state.",
-      },
+        explanation: "He was convicted of treason."
+      }
     ],
 
     orderingEvents: [
-      { id: 1, text: "Arrest of king", correctIndex: 0 },
-      { id: 2, text: "Trial begins", correctIndex: 1 },
-      { id: 3, text: "Guilty verdict", correctIndex: 2 },
-      { id: 4, text: "Execution ordered", correctIndex: 3 },
-      { id: 5, text: "Monarchy ends", correctIndex: 4 },
+      { id: 1, text: "Arrest", correctIndex: 0 },
+      { id: 2, text: "Trial", correctIndex: 1 },
+      { id: 3, text: "Verdict", correctIndex: 2 },
+      { id: 4, text: "Execution", correctIndex: 3 },
+      { id: 5, text: "End monarchy", correctIndex: 4 }
     ],
 
     swipeScenario: {
       date: "1793",
-      situation: "What to do with the king?",
-      context: "Revolutionary government debates fate of Louis XVI.",
-      leftChoice: "Execute him",
-      rightChoice: "Exile him",
+      situation: "Fate of king decided.",
+      context: "Revolution government debates.",
+      leftChoice: "Execute",
+      rightChoice: "Exile",
 
       leftOutcome: {
         title: "Final break",
-        text: "Monarchy ends permanently.",
-        historical:
-          "Execution radicalises Europe.",
-        reactions: [{ label: "Irreversible", color: "red" }],
+        text: "Monarchy ends.",
+        historical: "No return possible.",
+        reactions: [{ label: "Final", color: "red" }]
       },
 
       rightOutcome: {
-        title: "Monarchy survives abroad",
-        text: "Symbol of monarchy remains.",
-        historical:
-          "Could preserve royal legitimacy.",
-        reactions: [{ label: "Moderate", color: "green" }],
-      },
-    },
+        title: "Symbol survives",
+        text: "Monarchy remains abroad.",
+        historical: "Could inspire restoration.",
+        reactions: [{ label: "Moderate", color: "green" }]
+      }
+    }
   },
 
-  /* ─────────────────────────────── CHAPTER 7 ─────────────────────────────── */
+  /* ───────────────────────── CHAPTER 7 ───────────────────────── */
   {
     id: 7,
     title: "Rise of Napoleon",
@@ -474,58 +478,63 @@ Internally, it deepened divisions and accelerated radicalisation.`,
     isUnlocked: false,
     isCompleted: false,
     xpReward: 250,
+    description: "End of Revolution and rise of military rule.",
 
-    description:
-      "The Revolution ends as Napoleon takes power.",
-
-    learn: `By 1799, revolutionary France was unstable after years of political chaos and war.
-
-Napoleon Bonaparte rose through the military ranks due to his strategic success.
-
-He seized power in a coup and established the Consulate, effectively ending the Revolution.
-
-This marked the transition from revolution to authoritarian rule.`,
+    learn: {
+      core: [
+        "France unstable after revolution.",
+        "Napoleon rises through military success."
+      ],
+      key: [
+        "Coup of 1799 ends Revolution.",
+        "Consulate established."
+      ],
+      analysis: [
+        "Revolution fails to maintain stability.",
+        "Military power fills vacuum."
+      ],
+      stretch: [
+        "Authoritarian rule replaces revolutionary ideals."
+      ]
+    },
 
     questions: [
       {
-        text: "How did Napoleon come to power?",
-        options: ["Election", "Coup", "Inheritance", "Rebellion vote"],
+        text: "How did Napoleon gain power?",
+        options: ["Election", "Coup", "Inheritance", "Rebellion"],
         correct: 1,
-        explanation:
-          "He seized power through a coup d'état.",
-      },
+        explanation: "He seized power via coup."
+      }
     ],
 
     orderingEvents: [
-      { id: 1, text: "Military success rises", correctIndex: 0 },
-      { id: 2, text: "Political instability", correctIndex: 1 },
+      { id: 1, text: "Instability grows", correctIndex: 0 },
+      { id: 2, text: "Military influence rises", correctIndex: 1 },
       { id: 3, text: "Coup planned", correctIndex: 2 },
       { id: 4, text: "Power seized", correctIndex: 3 },
-      { id: 5, text: "Consulate formed", correctIndex: 4 },
+      { id: 5, text: "Consulate formed", correctIndex: 4 }
     ],
 
     swipeScenario: {
       date: "1799",
-      situation: "France is unstable after years of revolution.",
-      context: "Leadership vacuum threatens collapse.",
-      leftChoice: "Military takeover",
-      rightChoice: "Restore republic",
+      situation: "France unstable.",
+      context: "Leadership vacuum exists.",
+      leftChoice: "Military rule",
+      rightChoice: "Republic restored",
 
       leftOutcome: {
-        title: "Order restored",
-        text: "Stability returns under strong rule.",
-        historical:
-          "Leads to Napoleonic era.",
-        reactions: [{ label: "Control", color: "green" }],
+        title: "Order returns",
+        text: "Stability restored.",
+        historical: "Begins Napoleonic era.",
+        reactions: [{ label: "Control", color: "green" }]
       },
 
       rightOutcome: {
-        title: "Continued instability",
-        text: "Government remains weak.",
-        historical:
-          "Risk of collapse continues.",
-        reactions: [{ label: "Chaos", color: "red" }],
-      },
-    },
-  },
+        title: "Chaos continues",
+        text: "Instability remains.",
+        historical: "System weakens further.",
+        reactions: [{ label: "Chaos", color: "red" }]
+      }
+    }
+  }
 ];
