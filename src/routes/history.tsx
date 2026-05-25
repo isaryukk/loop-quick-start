@@ -1,387 +1,227 @@
-import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { Home, BookOpen, MessageSquare, User, Lock, CheckCircle } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { chapters } from "../data/chapters";
 
-/* ─────────────────────────────────────────────
-   EXPECTED CHAPTER STRUCTURE (YOU MUST HAVE THIS)
-───────────────────────────────────────────── */
+export const Route = createFileRoute("/history")({
+  component: HistoryPage,
+});
 
-type Chapter = {
-  id: number;
-  title: string;
-  date: string;
-  keyFigure: string;
-  isUnlocked: boolean;
+type Tab = "learn" | "quiz" | "order" | "decide";
 
-  learnContent: string;
+export default function HistoryPage() {
+  const chapter = chapters[0];
 
-  questions: {
-    text: string;
-    options: string[];
-    correct: number;
-    explanation: string;
-  }[];
-
-  orderingEvents: { text: string }[];
-
-  swipeScenarios: {
-    situation: string;
-    context: string;
-    leftChoice: string;
-    rightChoice: string;
-    leftOutcome: {
-      title: string;
-      text: string;
-      historical: string;
-    };
-    rightOutcome: {
-      title: string;
-      text: string;
-      historical: string;
-    };
-  }[];
-};
-
-/* ───────────────────────────────────────────── */
-
-type TabType = "learn" | "quiz" | "order" | "decide";
-
-type Progress = {
-  learnDone: boolean;
-  quizScore: number;
-  quizPassed: boolean;
-  orderDone: boolean;
-  decideDone: boolean;
-  xp: number;
-};
-
-/* ───────────────────────── SWIPE CARD ───────────────────────── */
-
-function SwipeCard({
-  scenarios,
-  onComplete,
-}: {
-  scenarios: Chapter["swipeScenarios"];
-  onComplete: () => void;
-}) {
-  const [index, setIndex] = useState(0);
-  const [dragX, setDragX] = useState(0);
-  const [startX, setStartX] = useState(0);
-  const [stage, setStage] = useState<"card" | "outcome" | "history">("card");
-  const [outcome, setOutcome] = useState<"left" | "right" | null>(null);
-
-  const THRESHOLD = 80;
-  const scenario = scenarios[index];
-
-  const handleEnd = () => {
-    if (dragX < -THRESHOLD) {
-      setOutcome("left");
-      setStage("outcome");
-    } else if (dragX > THRESHOLD) {
-      setOutcome("right");
-      setStage("outcome");
-    }
-    setDragX(0);
-  };
-
-  const next = () => {
-    if (index + 1 >= scenarios.length) {
-      onComplete();
-      return;
-    }
-    setIndex(index + 1);
-    setStage("card");
-  };
-
-  if (!scenario) return null;
-
-  if (stage === "outcome") {
-    const o = outcome === "left" ? scenario.leftOutcome : scenario.rightOutcome;
-
-    return (
-      <div className="rounded-2xl border border-white/15 bg-white/10 p-5">
-        <h3 className="text-white font-black mb-2">{o.title}</h3>
-        <p className="text-white/80 mb-4">{o.text}</p>
-
-        <button
-          onClick={() => setStage("history")}
-          className="w-full rounded-full py-3 font-bold text-white"
-          style={{ background: "oklch(0.72 0.18 350)" }}
-        >
-          See History →
-        </button>
-      </div>
-    );
-  }
-
-  if (stage === "history") {
-    const o = outcome === "left" ? scenario.leftOutcome : scenario.rightOutcome;
-
-    return (
-      <div className="rounded-2xl border border-white/15 bg-white/10 p-5">
-        <p className="text-white/80 mb-4">{o.historical}</p>
-
-        <button
-          onClick={next}
-          className="w-full rounded-full py-3 font-bold text-white"
-          style={{ background: "oklch(0.72 0.18 350)" }}
-        >
-          Next Decision →
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="rounded-2xl border border-white/20 bg-white/10 p-5"
-      onMouseDown={(e) => setStartX(e.clientX)}
-      onMouseMove={(e) => setDragX(e.clientX - startX)}
-      onMouseUp={handleEnd}
-      onMouseLeave={handleEnd}
-    >
-      <h3 className="text-white font-black mb-2">{scenario.situation}</h3>
-      <p className="text-white/70 mb-4">{scenario.context}</p>
-
-      <div className="flex justify-between text-xs text-white/50">
-        <span>← {scenario.leftChoice}</span>
-        <span>{scenario.rightChoice} →</span>
-      </div>
-    </div>
-  );
-}
-
-/* ───────────────────────── ORDERING ───────────────────────── */
-
-function OrderingQuiz({
-  events,
-  onComplete,
-}: {
-  events: Chapter["orderingEvents"];
-  onComplete: () => void;
-}) {
-  const [order, setOrder] = useState(events);
-
-  const swap = (i: number, j: number) => {
-    const copy = [...order];
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-    setOrder(copy);
-  };
-
-  return (
-    <div>
-      <p className="text-white/60 mb-3">Reorder the events</p>
-
-      {order.map((e, i) => (
-        <div
-          key={i}
-          className="p-3 mb-2 rounded-xl border border-white/10 bg-white/10 text-white cursor-pointer"
-          onClick={() => i > 0 && swap(i, i - 1)}
-        >
-          {e.text}
-        </div>
-      ))}
-
-      <button
-        onClick={onComplete}
-        className="w-full mt-3 rounded-full py-3 font-bold text-white"
-        style={{ background: "oklch(0.72 0.18 350)" }}
-      >
-        Submit Order
-      </button>
-    </div>
-  );
-}
-
-/* ───────────────────────── MAIN PAGE ───────────────────────── */
-
-export default function HistoryPage({ chapters }: { chapters: Chapter[] }) {
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>("learn");
+  const [tab, setTab] = useState<Tab>("learn");
   const [quizIndex, setQuizIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
-  const [progress, setProgress] = useState<Record<number, Progress>>({});
+  const [xp, setXp] = useState(0);
 
-  const selected = chapters.find((c) => c.id === selectedId);
+  const score = useMemo(() => {
+    return chapter.questions.reduce((acc, q, i) => {
+      return answers[i] === q.correct ? acc + 1 : acc;
+    }, 0);
+  }, [answers, chapter.questions]);
 
-  const getProgress = (id: number): Progress =>
-    progress[id] || {
-      learnDone: false,
-      quizScore: 0,
-      quizPassed: false,
-      orderDone: false,
-      decideDone: false,
-      xp: 0,
-    };
+  const quizPassed = score >= 7;
 
-  const updateProgress = (id: number, patch: Partial<Progress>) => {
-    setProgress((p) => ({
-      ...p,
-      [id]: { ...getProgress(id), ...patch },
-    }));
+  const orderUnlocked = quizPassed;
+  const decideUnlocked = quizPassed;
+
+  const currentQ = chapter.questions[quizIndex];
+
+  const addXP = (amount: number) => {
+    setXp((p) => p + amount);
   };
 
-  const quizScore = selected
-    ? Object.values(answers).filter(
-        (a, i) => a === selected.questions[i]?.correct
-      ).length
-    : 0;
-
   return (
-    <main className="min-h-screen bg-black text-white pb-24">
+    <main className="min-h-screen bg-background text-white p-6 pb-24">
 
       {/* HEADER */}
-      <div className="p-6">
-        <h1 className="text-3xl font-black">The French Revolution</h1>
+      <div className="mb-6">
+        <h1 className="text-2xl font-black">{chapter.title}</h1>
+        <p className="text-white/60 text-sm">{chapter.date}</p>
+        <p className="text-pink-400 font-bold mt-2">XP: {xp}</p>
       </div>
 
-      {/* TIMELINE */}
-      <div className="flex gap-3 overflow-x-auto px-6">
-        {chapters.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => setSelectedId(c.id)}
-            className="px-4 py-2 rounded-xl border border-white/10"
-          >
-            {c.title}
-          </button>
-        ))}
+      {/* TAB BUTTONS */}
+      <div className="flex gap-2 mb-6">
+        {["learn", "quiz", "order", "decide"].map((t) => {
+          const disabled =
+            (t === "quiz" && tab === "learn") ||
+            (t === "order" && !quizPassed) ||
+            (t === "decide" && !orderUnlocked);
+
+          return (
+            <button
+              key={t}
+              disabled={disabled}
+              onClick={() => setTab(t as Tab)}
+              className={`px-4 py-2 rounded-full text-sm font-bold ${
+                tab === t
+                  ? "text-white"
+                  : "text-white/50 bg-white/10"
+              }`}
+              style={
+                tab === t
+                  ? { background: "oklch(0.72 0.18 350)" }
+                  : {}
+              }
+            >
+              {t.toUpperCase()}
+            </button>
+          );
+        })}
       </div>
 
-      {/* CONTENT */}
-      <div className="p-6">
-        {!selected ? (
-          <p className="text-white/50">Select a chapter</p>
-        ) : (
-          <>
-            {/* TABS */}
-            <div className="flex gap-2 mb-4">
-              {(["learn", "quiz", "order", "decide"] as TabType[]).map(
-                (t) => (
-                  <button
-                    key={t}
-                    onClick={() => setActiveTab(t)}
-                    className="px-4 py-2 rounded-full"
-                    style={
-                      activeTab === t
-                        ? { background: "oklch(0.72 0.18 350)" }
-                        : { background: "#222" }
-                    }
-                  >
-                    {t}
-                  </button>
-                )
+      {/* LEARN */}
+      {tab === "learn" && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-black text-pink-300">
+            Key Context
+          </h2>
+
+          <p className="text-white/70 leading-relaxed">
+            {chapter.description}
+          </p>
+
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+            <p className="text-xs text-white/50 uppercase mb-2">
+              Key Figure
+            </p>
+            <p className="font-bold">{chapter.keyFigure}</p>
+          </div>
+
+          <p className="text-sm text-white/60 leading-relaxed">
+            France in 1789 was collapsing under financial strain, food shortages,
+            political paralysis, and growing public anger. The monarchy was losing
+            legitimacy faster than it could respond.
+          </p>
+        </div>
+      )}
+
+      {/* QUIZ */}
+      {tab === "quiz" && (
+        <div>
+          {quizIndex >= chapter.questions.length ? (
+            <div>
+              <h2 className="text-xl font-black mb-2">Quiz Complete</h2>
+              <p className="text-white/70 mb-4">
+                Score: {score} / {chapter.questions.length}
+              </p>
+
+              {score >= 7 ? (
+                <button
+                  onClick={() => {
+                    addXP(50);
+                    setTab("order");
+                  }}
+                  className="w-full py-3 rounded-full font-bold"
+                  style={{ background: "oklch(0.72 0.18 350)" }}
+                >
+                  Continue to Order →
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setQuizIndex(0);
+                    setAnswers({});
+                  }}
+                  className="w-full py-3 rounded-full font-bold bg-white/10"
+                >
+                  Retry Quiz
+                </button>
               )}
             </div>
+          ) : (
+            <div>
+              <h2 className="text-lg font-black mb-3">
+                Question {quizIndex + 1}
+              </h2>
 
-            {/* LEARN */}
-            {activeTab === "learn" && (
-              <div className="p-5 rounded-xl bg-white/10">
-                <p className="whitespace-pre-line text-white/80">
-                  {selected.learnContent}
-                </p>
+              <p className="mb-4 text-white/70">
+                {currentQ.text}
+              </p>
 
-                <button
-                  className="mt-4 w-full rounded-full py-3 font-bold"
-                  style={{ background: "oklch(0.72 0.18 350)" }}
-                  onClick={() => {
-                    updateProgress(selected.id, {
-                      learnDone: true,
-                      xp: getProgress(selected.id).xp + 10,
-                    });
-                    setActiveTab("quiz");
-                  }}
-                >
-                  Start Quiz →
-                </button>
-              </div>
-            )}
-
-            {/* QUIZ */}
-            {activeTab === "quiz" && selected && (
-              <div>
-                <h3 className="mb-3">
-                  {selected.questions[quizIndex]?.text}
-                </h3>
-
-                {selected.questions[quizIndex]?.options.map(
-                  (opt, i) => (
-                    <button
-                      key={i}
-                      onClick={() =>
-                        setAnswers((a) => ({
-                          ...a,
-                          [quizIndex]: i,
-                        }))
+              <div className="space-y-2">
+                {currentQ.options.map((opt, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      if (answers[quizIndex] === undefined) {
+                        setAnswers((p) => ({ ...p, [quizIndex]: i }));
                       }
-                      className="block w-full p-3 mb-2 rounded-xl bg-white/10"
-                    >
-                      {opt}
-                    </button>
-                  )
-                )}
+                    }}
+                    className="w-full p-3 rounded-xl text-left bg-white/5 border border-white/10"
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
 
+              {answers[quizIndex] !== undefined && (
                 <button
-                  onClick={() => {
-                    if (quizScore >= 7) {
-                      updateProgress(selected.id, {
-                        quizPassed: true,
-                        quizScore,
-                        xp:
-                          getProgress(selected.id).xp + 20,
-                      });
-                      setActiveTab("order");
-                    }
-                  }}
-                  className="mt-4 w-full rounded-full py-3 font-bold"
+                  onClick={() => setQuizIndex((p) => p + 1)}
+                  className="mt-4 w-full py-3 rounded-full font-bold"
                   style={{ background: "oklch(0.72 0.18 350)" }}
                 >
-                  Continue (Need 7+)
+                  Next →
                 </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ORDER */}
+      {tab === "order" && (
+        <div>
+          <h2 className="text-xl font-black mb-4">Order Events</h2>
+
+          <div className="space-y-3">
+            {chapter.orderingEvents.map((e) => (
+              <div
+                key={e.id}
+                className="p-3 rounded-xl bg-white/5 border border-white/10"
+              >
+                {e.text}
               </div>
-            )}
+            ))}
+          </div>
 
-            {/* ORDER */}
-            {activeTab === "order" && (
-              <OrderingQuiz
-                events={selected.orderingEvents}
-                onComplete={() => {
-                  updateProgress(selected.id, {
-                    orderDone: true,
-                    xp:
-                      getProgress(selected.id).xp + 15,
-                  });
-                  setActiveTab("decide");
-                }}
-              />
-            )}
+          {orderUnlocked && (
+            <button
+              onClick={() => {
+                addXP(50);
+                setTab("decide");
+              }}
+              className="mt-4 w-full py-3 rounded-full font-bold"
+              style={{ background: "oklch(0.72 0.18 350)" }}
+            >
+              Continue to Decision →
+            </button>
+          )}
+        </div>
+      )}
 
-            {/* DECIDE */}
-            {activeTab === "decide" && (
-              <SwipeCard
-                scenarios={selected.swipeScenarios}
-                onComplete={() => {
-                  updateProgress(selected.id, {
-                    decideDone: true,
-                    xp:
-                      getProgress(selected.id).xp + 25,
-                  });
-                }}
-              />
-            )}
-          </>
-        )}
-      </div>
+      {/* DECIDE */}
+      {tab === "decide" && (
+        <div>
+          <h2 className="text-xl font-black mb-3">
+            Final Decision Unlocked
+          </h2>
 
-      {/* NAV */}
-      <nav className="fixed bottom-0 w-full flex justify-around p-4 border-t border-white/10 bg-black">
-        <Link to="/home">Home</Link>
-        <Link to="/history" style={{ color: "#ff4fd8" }}>
-          History
-        </Link>
-        <Link to="/debate">Debate</Link>
-        <Link to="/profile">Profile</Link>
-      </nav>
+          <p className="text-white/70">
+            You can now return to the swipe decision mode.
+          </p>
+
+          <button
+            className="mt-4 w-full py-3 rounded-full font-bold"
+            style={{ background: "oklch(0.72 0.18 350)" }}
+          >
+            Enter Decision Mode →
+          </button>
+        </div>
+      )}
     </main>
   );
 }
