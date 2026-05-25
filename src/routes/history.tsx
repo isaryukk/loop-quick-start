@@ -1,316 +1,304 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
-import {
-  CheckCircle,
-  Lock,
-  ArrowLeftRight,
-  Home,
-  BookOpen,
-  User,
-  MessageSquare,
-  RotateCcw,
-} from "lucide-react";
+// ─────────────────────────────────────────────────────────────────────────────
+// SWIPE DECISION COMPONENT (MULTI-SCENARIO VERSION)
+// ─────────────────────────────────────────────────────────────────────────────
 
-export const Route = createFileRoute("/history")({
-  component: HistoryPage,
-  head: () => ({ meta: [{ title: "CivicLoop — French Revolution" }] }),
-});
-
-// ── DATA ────────────────────────────────────────────────────────────────────
-
-const chapters = [
-  {
-    id: 1,
-    title: "Causes of the Revolution",
-    keyFigure: "King Louis XVI",
-    date: "1788–1789",
-    description:
-      "By 1789 France was bankrupt from funding the American Revolution, bread prices had tripled after two failed harvests, and the gap between aristocracy and peasants had never been wider. Louis XVI had no solution — and no credibility left to find one.",
-    isUnlocked: true,
-    isCompleted: true,
-    questions: [
-      {
-        text: "What was the primary cause of France's bankruptcy before the Revolution?",
-        options: [
-          "Expensive wars including the American Revolution",
-          "A devastating plague",
-          "A foreign invasion",
-          "A royal spending scandal",
-        ],
-        correct: 0,
-        explanation:
-          "France spent enormous sums funding the American Revolution against Britain, leaving the treasury empty.",
-      },
-    ],
-    orderingEvents: [
-      { id: 1, text: "France goes bankrupt funding the American Revolution", correctPosition: 0 },
-      { id: 2, text: "Two failed harvests triple bread prices", correctPosition: 1 },
-      { id: 3, text: "Louis XVI calls the Estates-General", correctPosition: 2 },
-      { id: 4, text: "Third Estate declares itself National Assembly", correctPosition: 3 },
-    ],
-    swipeScenario: {
-      date: "FRANCE · 1789",
-      situation: "Bread prices are exploding across Paris.",
-      context:
-        "It is 1789. Harvests have failed. Bread prices have tripled. Thousands are starving.",
-      leftChoice: "Raise Taxes",
-      rightChoice: "Subsidise Grain",
-      leftOutcome: {
-        title: "You chose: Raise Taxes",
-        text: "Riots intensified and the Bastille was stormed.",
-        reactions: [{ label: "Peasants: FURIOUS", color: "red" }],
-        historical: "This mirrors what actually happened.",
-      },
-      rightOutcome: {
-        title: "You chose: Subsidise Grain",
-        text: "Riots eased temporarily but finances collapsed.",
-        reactions: [{ label: "Peasants: RELIEVED", color: "green" }],
-        historical: "Some historians argue this could have delayed collapse.",
-      },
-    },
-  },
-];
-
-// ── ORDERING QUIZ ───────────────────────────────────────────────────────────
-
-type OrderEvent = { id: number; text: string; correctPosition: number };
-
-function OrderingQuiz({
-  events,
-  onComplete,
-}: {
-  events: OrderEvent[];
-  onComplete: () => void;
-}) {
-  const [available, setAvailable] = useState<OrderEvent[]>(() =>
-    [...events].sort(() => Math.random() - 0.5)
-  );
-  const [sequence, setSequence] = useState<(OrderEvent | null)[]>([
-    null,
-    null,
-    null,
-    null,
-  ]);
-  const [checked, setChecked] = useState(false);
-  const [isCorrect, setIsCorrect] = useState(false);
-
-  const addToSequence = (event: OrderEvent) => {
-    const nextSlot = sequence.findIndex((s) => s === null);
-    if (nextSlot === -1) return;
-    const newSeq = [...sequence];
-    newSeq[nextSlot] = event;
-    setSequence(newSeq);
-    setAvailable((prev) => prev.filter((e) => e.id !== event.id));
-  };
-
-  const removeFromSequence = (index: number) => {
-    const event = sequence[index];
-    if (!event) return;
-    const newSeq = [...sequence];
-    newSeq[index] = null;
-    setSequence(newSeq);
-    setAvailable((prev) => [...prev, event]);
-  };
-
-  const checkOrder = () => {
-    const correct = sequence.every(
-      (e, i) => e !== null && e.correctPosition === i
-    );
-    setIsCorrect(correct);
-    setChecked(true);
-  };
-
-  const reset = () => {
-    setAvailable([...events].sort(() => Math.random() - 0.5));
-    setSequence([null, null, null, null]);
-    setChecked(false);
-    setIsCorrect(false);
-  };
-
-  const allFilled = sequence.every((s) => s !== null);
-
-  return (
-    <div>
-      <h3 className="text-lg font-black text-white mb-2">
-        Put events in the correct order
-      </h3>
-
-      {available.map((event) => (
-        <button
-          key={event.id}
-          onClick={() => addToSequence(event)}
-          className="rounded-xl border border-white/20 bg-white/8 px-3 py-2 text-sm font-semibold text-white"
-        >
-          {event.text}
-        </button>
-      ))}
-
-      <div className="flex flex-col gap-2 mt-4">
-        {sequence.map((slot, i) => (
-          <div key={i} className="border p-3 rounded-xl">
-            <span className="font-bold">{i + 1}</span>
-            {slot ? (
-              <span>{slot.text}</span>
-            ) : (
-              <span className="text-white/30">Empty</span>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {allFilled && (
-        <button onClick={checkOrder} className="mt-4 w-full bg-pink-500 py-2 rounded-full">
-          Check
-        </button>
-      )}
-
-      {checked && (
-        <button onClick={reset} className="mt-2 w-full border py-2 rounded-full">
-          Try Again
-        </button>
-      )}
-    </div>
-  );
-}
-
-// ── SWIPE CARD ──────────────────────────────────────────────────────────────
-
-function SwipeCard({
-  scenario,
-}: {
-  scenario: typeof chapters[0]["swipeScenario"];
-}) {
+function SwipeCard({ scenarios }: { scenarios: typeof chapters[0]["swipeScenarios"] }) {
+  const [index, setIndex] = useState(0);
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [outcome, setOutcome] = useState<"left" | "right" | null>(null);
   const [stage, setStage] = useState<"card" | "outcome" | "history">("card");
 
+  const scenario = scenarios[index];
   const startX = { current: 0 };
   const THRESHOLD = 80;
 
-  const handleStart = (x: number) => {
-    setIsDragging(true);
-    startX.current = x;
-  };
+  const rotation = Math.min(Math.max(dragX / 14, -22), 22);
+  const leftTint = dragX < 0 ? Math.min(Math.abs(dragX) / 80, 0.7) : 0;
+  const rightTint = dragX > 0 ? Math.min(dragX / 80, 0.7) : 0;
 
-  const handleMove = (x: number) => {
-    if (isDragging) setDragX(x - startX.current);
-  };
+  const handleStart = (x: number) => { setIsDragging(true); startX.current = x; };
+  const handleMove = (x: number) => { if (isDragging) setDragX(x - startX.current); };
 
   const handleEnd = () => {
     setIsDragging(false);
-    if (dragX < -THRESHOLD) {
-      setOutcome("left");
-      setStage("outcome");
-    } else if (dragX > THRESHOLD) {
-      setOutcome("right");
-      setStage("outcome");
-    }
-    setDragX(0);
+    if (dragX < -THRESHOLD) { setOutcome("left"); setStage("outcome"); }
+    else if (dragX > THRESHOLD) { setOutcome("right"); setStage("outcome"); }
+    else setDragX(0);
   };
 
-  if (stage === "outcome") {
-    const o =
-      outcome === "left" ? scenario.leftOutcome : scenario.rightOutcome;
-
-    return (
-      <div className="p-4 border rounded-xl">
-        <h3>{o.title}</h3>
-        <p>{o.text}</p>
-        <button onClick={() => setStage("history")}>
-          See history
-        </button>
-      </div>
-    );
-  }
+  const next = () => {
+    setDragX(0);
+    setOutcome(null);
+    setStage("card");
+    setIndex((i) => Math.min(i + 1, scenarios.length - 1));
+  };
 
   if (stage === "history") {
     return (
-      <div className="p-4 border rounded-xl">
-        <p>
+      <div className="rounded-2xl border border-white/15 bg-white/8 p-5">
+        <p className="text-xs font-bold uppercase tracking-widest text-white/50 mb-3">
+          What Actually Happened
+        </p>
+        <p className="text-base font-semibold leading-relaxed text-white/80">
           {outcome === "left"
             ? scenario.leftOutcome.historical
             : scenario.rightOutcome.historical}
         </p>
-        <button onClick={() => setStage("card")}>
-          Try again
+        <button
+          onClick={() => setStage("card")}
+          className="mt-4 w-full rounded-full border border-white/20 py-2.5 text-sm font-bold text-white/70 hover:bg-white/8"
+        >
+          Back to decision ↺
+        </button>
+      </div>
+    );
+  }
+
+  if (stage === "outcome") {
+    const o = outcome === "left" ? scenario.leftOutcome : scenario.rightOutcome;
+
+    return (
+      <div className="rounded-2xl border border-white/15 bg-white/8 p-5">
+        <div className={`rounded-xl border p-3 mb-4 ${
+          outcome === "left"
+            ? "border-red-500/30 bg-red-500/10"
+            : "border-[oklch(0.72_0.18_350)/0.3] bg-[oklch(0.72_0.18_350)/0.1]"
+        }`}>
+          <p className="text-sm font-bold text-white">{o.title}</p>
+        </div>
+
+        <p className="text-base font-semibold leading-relaxed text-white mb-4">
+          {o.text}
+        </p>
+
+        <button
+          onClick={() => setStage("history")}
+          className="w-full rounded-full py-3 text-sm font-bold text-white"
+          style={{ background: "oklch(0.72 0.18 350)" }}
+        >
+          See what history says →
+        </button>
+
+        <button
+          onClick={next}
+          className="mt-3 w-full rounded-full border border-white/20 py-3 text-sm font-bold text-white/70"
+        >
+          Next scenario →
         </button>
       </div>
     );
   }
 
   return (
-    <div
-      onMouseDown={(e) => handleStart(e.clientX)}
-      onMouseMove={(e) => handleMove(e.clientX)}
-      onMouseUp={handleEnd}
-      className="p-5 border rounded-xl"
-    >
-      <h3>{scenario.situation}</h3>
-      <p>{scenario.context}</p>
-      <p>← {scenario.leftChoice} | {scenario.rightChoice} →</p>
+    <div>
+      <p className="text-xs font-bold uppercase tracking-widest text-white/50 mb-3">
+        Scenario {index + 1} / {scenarios.length}
+      </p>
+
+      <div
+        className="rounded-2xl border border-white/20 p-5 cursor-grab active:cursor-grabbing select-none"
+        style={{
+          background: "rgba(255,255,255,0.06)",
+          transform: `rotate(${rotation}deg) translateX(${dragX * 0.2}px)`,
+          transition: isDragging ? "none" : "transform 0.3s ease",
+          boxShadow:
+            dragX < 0
+              ? `inset 5px 0 24px rgba(239,68,68,${leftTint})`
+              : dragX > 0
+              ? `inset -5px 0 24px oklch(0.72 0.18 350 / ${rightTint})`
+              : "none",
+        }}
+        onMouseDown={(e) => { e.preventDefault(); handleStart(e.clientX); }}
+        onMouseMove={(e) => handleMove(e.clientX)}
+        onMouseUp={handleEnd}
+        onMouseLeave={handleEnd}
+        onTouchStart={(e) => handleStart(e.touches[0].clientX)}
+        onTouchMove={(e) => handleMove(e.touches[0].clientX)}
+        onTouchEnd={handleEnd}
+      >
+        <h3 className="text-lg font-black text-white mb-2">{scenario.situation}</h3>
+
+        <p className="text-sm font-semibold leading-relaxed text-white/70 mb-4">
+          {scenario.context}
+        </p>
+
+        <div className="flex justify-between text-xs font-bold">
+          <span className="text-red-400">← {scenario.leftChoice}</span>
+          <span style={{ color: "oklch(0.78 0.18 350)" }}>
+            {scenario.rightChoice} →
+          </span>
+        </div>
+      </div>
+
+      <p className="text-center text-xs text-white/40 mt-2">
+        Swipe to decide
+      </p>
     </div>
   );
 }
 
-// ── MAIN PAGE ───────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────────────────────────────────────
 
 function HistoryPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    "learn" | "quiz" | "order" | "decide"
-  >("learn");
+  const [activeTab, setActiveTab] = useState<TabType>("learn");
+  const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
+  const [quizIndex, setQuizIndex] = useState(0);
 
   const selectedChapter = chapters.find((c) => c.id === selectedId);
 
-  return (
-    <main className="min-h-screen bg-black text-white p-6">
-      <h1 className="text-3xl font-black mb-4">
-        French Revolution
-      </h1>
+  const quizQuestions = selectedChapter
+    ? selectedChapter.questions.slice(0, 10)
+    : [];
 
-      <div className="flex gap-2 mb-4">
-        {chapters.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => setSelectedId(c.id)}
-            className="border px-3 py-2 rounded"
-          >
-            {c.title}
-          </button>
-        ))}
+  const score = Object.values(quizAnswers).filter((a, i) => a === quizQuestions[i]?.correct).length;
+  const passed = score >= 7;
+
+  const currentQ = quizQuestions[quizIndex];
+
+  return (
+    <main className="relative flex min-h-screen flex-col bg-background pb-24 text-foreground">
+
+      {/* HEADER */}
+      <div className="px-6 pt-14 pb-4">
+        <h1 className="text-3xl font-black text-white">The French Revolution</h1>
+        <p className="text-sm text-white/50">Interactive learning timeline</p>
       </div>
 
-      {selectedChapter && (
-        <div>
-          <div className="flex gap-2 mb-4">
-            {["learn", "quiz", "order", "decide"].map((t) => (
-              <button
-                key={t}
-                onClick={() => setActiveTab(t as any)}
-                className="border px-3 py-1 rounded"
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
-          {activeTab === "learn" && (
-            <p>{selectedChapter.description}</p>
-          )}
-
-          {activeTab === "order" && (
-            <OrderingQuiz
-              events={selectedChapter.orderingEvents}
-              onComplete={() => {}}
-            />
-          )}
-
-          {activeTab === "decide" && (
-            <SwipeCard scenario={selectedChapter.swipeScenario} />
-          )}
+      {/* TIMELINE */}
+      <div className="px-6 overflow-x-auto">
+        <div className="flex gap-4">
+          {chapters.map((c) => (
+            <div
+              key={c.id}
+              onClick={() => setSelectedId(c.id)}
+              className="min-w-[160px] rounded-xl border border-white/10 bg-white/5 p-3 cursor-pointer"
+            >
+              <p className="text-xs text-white/50">{c.date}</p>
+              <p className="text-sm font-bold text-white">{c.title}</p>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
+
+      {/* CONTENT */}
+      <div className="px-6 mt-6">
+
+        {!selectedChapter ? (
+          <p className="text-white/50">Select a chapter</p>
+        ) : (
+          <>
+            {/* TABS */}
+            <div className="flex gap-2 mb-4">
+              {(["learn", "quiz", "order", "decide"] as TabType[]).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => { setActiveTab(t); setQuizIndex(0); setQuizAnswers({}); }}
+                  className="px-4 py-2 rounded-full text-sm font-bold"
+                  style={activeTab === t ? { background: "oklch(0.72 0.18 350)", color: "white" } : {}}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+
+            {/* LEARN (ENHANCED) */}
+            {activeTab === "learn" && (
+              <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+                <h2 className="text-2xl font-black text-white mb-2">
+                  {selectedChapter.title}
+                </h2>
+
+                <p className="text-white/60 font-semibold mb-3">
+                  {selectedChapter.date}
+                </p>
+
+                <p className="text-white/80 font-semibold leading-relaxed mb-4">
+                  {selectedChapter.description}
+                </p>
+
+                <div className="space-y-3 text-white/70 text-sm">
+                  <p><b className="text-white">Key Figure:</b> {selectedChapter.keyFigure}</p>
+                  <p><b className="text-white">Why it matters:</b> This event shaped political authority, public unrest, and revolutionary ideology across Europe.</p>
+                  <p><b className="text-white">Impact:</b> Long-term structural change in governance and rights systems.</p>
+                </div>
+              </div>
+            )}
+
+            {/* QUIZ (7 REQUIRED) */}
+            {activeTab === "quiz" && (
+              <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
+
+                {quizIndex >= quizQuestions.length ? (
+                  <div className="text-center">
+                    <h2 className="text-2xl font-black text-white">
+                      Score: {score}/10
+                    </h2>
+
+                    <p className="text-white/60 mt-2">
+                      {passed ? "Passed (7+ required)" : "Try again (need 7/10)"}
+                    </p>
+
+                    <button
+                      onClick={() => { setQuizIndex(0); setQuizAnswers({}); }}
+                      className="mt-4 w-full py-3 rounded-full font-bold text-white"
+                      style={{ background: "oklch(0.72 0.18 350)" }}
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-white/60 text-sm mb-2">
+                      Question {quizIndex + 1}/10 • Score {score}
+                    </p>
+
+                    <h3 className="text-lg font-black text-white mb-4">
+                      {currentQ.text}
+                    </h3>
+
+                    {currentQ.options.map((o, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          if (quizAnswers[quizIndex] === undefined) {
+                            setQuizAnswers((p) => ({ ...p, [quizIndex]: i }));
+                          }
+                        }}
+                        className="w-full mb-2 rounded-xl border border-white/10 bg-white/5 p-3 text-left text-white"
+                      >
+                        {o}
+                      </button>
+                    ))}
+
+                    {quizAnswers[quizIndex] !== undefined && (
+                      <button
+                        onClick={() => setQuizIndex((i) => i + 1)}
+                        className="w-full mt-3 py-3 rounded-full text-white font-bold"
+                        style={{ background: "oklch(0.72 0.18 350)" }}
+                      >
+                        Next →
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ORDER + DECIDE (UPDATED HOOKS) */}
+            {activeTab === "order" && (
+              <OrderingQuiz events={selectedChapter.orderingEvents.slice(0, 5)} />
+            )}
+
+            {activeTab === "decide" && (
+              <SwipeCard scenarios={selectedChapter.swipeScenarios.slice(0, 5)} />
+            )}
+          </>
+        )}
+      </div>
     </main>
   );
 }
