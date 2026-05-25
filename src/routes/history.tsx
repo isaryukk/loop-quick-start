@@ -1,160 +1,52 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-
-/* ─────────────────────────────────────────────
-   TYPES
-───────────────────────────────────────────── */
+import { useState } from "react";
+import { chapters } from "../data/chapter";
 
 type TabType = "learn" | "quiz" | "order" | "decide";
 
-type SwipeScenario = {
-  situation: string;
-  context: string;
-  leftChoice: string;
-  rightChoice: string;
-  leftOutcome: any;
-  rightOutcome: any;
-  date: string;
-};
+function getDifficulty(xp: number) {
+  if (xp < 300) return "beginner";
+  if (xp < 800) return "intermediate";
+  return "advanced";
+}
 
-type Chapter = {
-  id: number;
-  title: string;
-  date: string;
-  keyFigure: string;
-  isUnlocked: boolean;
-  isCompleted: boolean;
-
-  learn: string[];
-
-  questions: {
-    text: string;
-    options: string[];
-    correct: number;
-    explanation: string;
-  }[];
-
-  orderingEvents: {
-    id: string;
-    text: string;
-    correctOrder: number;
-  }[];
-
-  swipeScenarios: SwipeScenario[];
-};
-
-/* ─────────────────────────────────────────────
-   CHAPTER DATA (EXPANDED)
-───────────────────────────────────────────── */
-
-const chapters: Chapter[] = [
-  {
-    id: 1,
-    title: "The Crisis Begins",
-    date: "1788–1789",
-    keyFigure: "Louis XVI",
-    isUnlocked: true,
-    isCompleted: false,
-
-    learn: [
-      "By 1788, France was effectively bankrupt after decades of war spending, including costly support for the American Revolution.",
-      "Two consecutive harvest failures caused bread prices to triple — bread made up ~80% of working-class diets.",
-      "The French taxation system was deeply unequal: the Third Estate paid almost all taxes while nobles and clergy were largely exempt.",
-      "Public anger shifted from frustration to political consciousness — people began questioning the legitimacy of the monarchy itself.",
-      "Louis XVI was widely seen as indecisive, which weakened royal authority at a critical moment."
-    ],
-
-    questions: Array.from({ length: 10 }).map((_, i) => ({
-      text: `Sample question ${i + 1} about crisis causes?`,
-      options: ["A", "B", "C", "D"],
-      correct: 0,
-      explanation: "Explanation placeholder."
-    })),
-
-    orderingEvents: Array.from({ length: 5 }).map((_, i) => ({
-      id: `e${i}`,
-      text: `Key event ${i + 1}`,
-      correctOrder: i
-    })),
-
-    swipeScenarios: Array.from({ length: 5 }).map((_, i) => ({
-      situation: `Crisis decision ${i + 1}`,
-      context: "Economic pressure is rising.",
-      leftChoice: "Raise taxes",
-      rightChoice: "Reform system",
-      leftOutcome: { text: "Unrest increases" },
-      rightOutcome: { text: "Slow reform begins" },
-      date: "1789"
-    }))
-  },
-
-  {
-    id: 2,
-    title: "Estates-General",
-    date: "1789",
-    keyFigure: "Louis XVI",
-
-    isUnlocked: false,
-    isCompleted: false,
-
-    learn: [
-      "The Estates-General was called for the first time since 1614 — showing how severe the crisis had become.",
-      "It consisted of three estates: clergy, nobility, and the Third Estate (everyone else).",
-      "The Third Estate represented ~98% of the population but had the same voting power as the other two combined.",
-      "Disputes over voting structure triggered political deadlock almost immediately.",
-      "This moment marked the transition from economic crisis to full political revolution."
-    ],
-
-    questions: [],
-    orderingEvents: [],
-    swipeScenarios: []
-  }
-];
+function checkAnswer(selected: number, correct: number) {
+  return selected === correct;
+}
 
 /* ─────────────────────────────────────────────
    SWIPE CARD
 ───────────────────────────────────────────── */
 
-function SwipeCard({ scenario }: { scenario: SwipeScenario }) {
+function SwipeCard({ scenario }: any) {
   const [dragX, setDragX] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
   const [stage, setStage] = useState<"card" | "outcome" | "history">("card");
   const [outcome, setOutcome] = useState<"left" | "right" | null>(null);
 
   const startX = useState({ current: 0 })[0];
-
   const THRESHOLD = 80;
 
   const rotation = Math.min(Math.max(dragX / 14, -22), 22);
 
   const handleStart = (x: number) => {
-    setIsDragging(true);
     startX.current = x;
   };
 
   const handleMove = (x: number) => {
-    if (!isDragging) return;
     setDragX(x - startX.current);
   };
 
   const handleEnd = () => {
-    setIsDragging(false);
-
-    if (dragX > THRESHOLD) {
-      setOutcome("right");
-      setStage("outcome");
-    } else if (dragX < -THRESHOLD) {
-      setOutcome("left");
-      setStage("outcome");
-    }
-
+    if (dragX > THRESHOLD) setOutcome("right");
+    else if (dragX < -THRESHOLD) setOutcome("left");
+    setStage("outcome");
     setDragX(0);
   };
 
   if (stage === "outcome") {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-5 animate-pulse">
-        <h3 className="text-white font-bold mb-2">Outcome</h3>
+      <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+        <h3 className="font-bold mb-2">Outcome</h3>
         <p className="text-white/70">
           {outcome === "left"
             ? scenario.leftOutcome.text
@@ -163,10 +55,9 @@ function SwipeCard({ scenario }: { scenario: SwipeScenario }) {
 
         <button
           onClick={() => setStage("history")}
-          className="mt-4 w-full rounded-full py-2 font-bold text-white"
-          style={{ background: "oklch(0.72 0.18 350)" }}
+          className="mt-3 px-4 py-2 rounded-full bg-white/10"
         >
-          Continue →
+          Continue
         </button>
       </div>
     );
@@ -174,10 +65,10 @@ function SwipeCard({ scenario }: { scenario: SwipeScenario }) {
 
   if (stage === "history") {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-5 animate-in fade-in">
-        <h3 className="text-white font-bold mb-2">Historical Outcome</h3>
+      <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+        <h3 className="font-bold mb-2">Historical Insight</h3>
         <p className="text-white/70">
-          This decision mirrors real tensions that escalated the French Revolution.
+          {scenario.leftOutcome.historical}
         </p>
       </div>
     );
@@ -185,16 +76,14 @@ function SwipeCard({ scenario }: { scenario: SwipeScenario }) {
 
   return (
     <div
-      className="rounded-2xl border border-white/20 p-5 bg-white/5"
-      style={{
-        transform: `rotate(${rotation}deg) translateX(${dragX * 0.2}px)`
-      }}
+      className="p-4 rounded-xl bg-white/5 border border-white/10"
+      style={{ transform: `rotate(${rotation}deg)` }}
       onMouseDown={(e) => handleStart(e.clientX)}
       onMouseMove={(e) => handleMove(e.clientX)}
       onMouseUp={handleEnd}
     >
-      <h3 className="text-white font-bold mb-2">{scenario.situation}</h3>
-      <p className="text-white/70 mb-4">{scenario.context}</p>
+      <h3 className="font-bold mb-2">{scenario.situation}</h3>
+      <p className="text-white/70 mb-3">{scenario.context}</p>
 
       <div className="flex justify-between text-sm text-white/60">
         <span>{scenario.leftChoice}</span>
@@ -205,7 +94,7 @@ function SwipeCard({ scenario }: { scenario: SwipeScenario }) {
 }
 
 /* ─────────────────────────────────────────────
-   MAIN PAGE
+   MAIN ROUTE
 ───────────────────────────────────────────── */
 
 export const Route = createFileRoute("/history")({
@@ -213,105 +102,128 @@ export const Route = createFileRoute("/history")({
 });
 
 function HistoryPage() {
-  const [selectedId, setSelectedId] = useState<number | null>(1);
   const [activeTab, setActiveTab] = useState<TabType>("learn");
   const [xp, setXp] = useState(0);
   const [quizScore, setQuizScore] = useState(0);
+  const [chapterIndex, setChapterIndex] = useState(0);
 
-  const chapter = chapters.find((c) => c.id === selectedId)!;
+  const chapter = chapters[chapterIndex];
+  const level = getDifficulty(xp);
 
-  const unlockOrder = quizScore >= 7;
-  const unlockDecide = xp >= 50;
+  /* ─────────────── LEARN SYSTEM ─────────────── */
+
+  const learnContent =
+    level === "beginner"
+      ? chapter.learn.core
+      : level === "intermediate"
+      ? [...chapter.learn.core, ...chapter.learn.key]
+      : [
+          ...chapter.learn.core,
+          ...chapter.learn.key,
+          ...chapter.learn.analysis,
+          ...chapter.learn.stretch,
+        ];
 
   return (
-    <main className="min-h-screen bg-black text-white px-6 py-10">
+    <main className="min-h-screen bg-black text-white p-6">
 
       {/* HEADER */}
-      <h1 className="text-3xl font-black mb-2">French Revolution</h1>
-      <p className="text-white/60 mb-6">Progressive history game</p>
+      <h1 className="text-2xl font-bold mb-2">
+        French Revolution Learning Path
+      </h1>
+
+      <p className="text-white/50 mb-4">
+        Chapter {chapter.id}: {chapter.title}
+      </p>
+
+      {/* CHAPTER SELECTOR (ALL 7 CHAPTERS) */}
+      <div className="flex gap-2 flex-wrap mb-6">
+        {chapters.map((c, i) => (
+          <button
+            key={c.id}
+            onClick={() => {
+              setChapterIndex(i);
+              setActiveTab("learn");
+            }}
+            className={`px-3 py-1 rounded-full text-sm ${
+              i === chapterIndex ? "bg-pink-500" : "bg-white/10"
+            }`}
+          >
+            {c.id}
+          </button>
+        ))}
+      </div>
 
       {/* TABS */}
       <div className="flex gap-2 mb-6">
-        {(["learn", "quiz", "order", "decide"] as TabType[]).map((t) => (
+        {(["learn", "quiz", "decide"] as TabType[]).map((t) => (
           <button
             key={t}
             onClick={() => setActiveTab(t)}
-            className="px-4 py-2 rounded-full text-sm font-bold"
-            style={{
-              background:
-                activeTab === t ? "oklch(0.72 0.18 350)" : "rgba(255,255,255,0.1)"
-            }}
+            className={`px-4 py-2 rounded-full ${
+              activeTab === t ? "bg-pink-500" : "bg-white/10"
+            }`}
           >
             {t}
           </button>
         ))}
       </div>
 
-      {/* LEARN */}
+      {/* ───────── LEARN ───────── */}
       {activeTab === "learn" && (
-        <div className="space-y-4">
-          {chapter.learn.map((p, i) => (
+        <div className="space-y-3">
+          {learnContent.map((text, i) => (
             <p key={i} className="text-white/70 leading-relaxed">
-              {p}
+              {text}
             </p>
           ))}
-          <button
-            onClick={() => setActiveTab("quiz")}
-            className="mt-4 w-full rounded-full py-3 font-bold text-white"
-            style={{ background: "oklch(0.72 0.18 350)" }}
-          >
-            Start Quiz →
-          </button>
+
+          <div className="mt-6 text-white/40 text-sm">
+            XP: {xp} | Difficulty: {level}
+          </div>
         </div>
       )}
 
-      {/* QUIZ */}
+      {/* ───────── QUIZ ───────── */}
       {activeTab === "quiz" && (
         <div>
-          <p className="mb-4">Quiz Score: {quizScore}</p>
-          <button
-            onClick={() => setQuizScore((s) => Math.min(10, s + 1))}
-            className="w-full py-3 rounded-full bg-white/10 mb-2"
-          >
-            Answer Correct (+1)
-          </button>
+          <p className="mb-4 text-white/70">
+            Score: {quizScore}
+          </p>
 
-          {quizScore >= 7 && (
-            <button
-              onClick={() => setActiveTab("order")}
-              className="w-full py-3 rounded-full"
-              style={{ background: "oklch(0.72 0.18 350)" }}
-            >
-              Unlock Order →
-            </button>
-          )}
+          {chapter.questions.map((q, i) => (
+            <div key={i} className="mb-6">
+              <p className="mb-2 font-semibold">{q.text}</p>
+
+              {q.options.map((opt, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    if (checkAnswer(idx, q.correct)) {
+                      setQuizScore((s) => s + 1);
+                      setXp((x) => x + 10);
+                    } else {
+                      setXp((x) => x + 2);
+                    }
+                  }}
+                  className="block w-full mb-2 p-2 rounded bg-white/10"
+                >
+                  {opt}
+                </button>
+              ))}
+
+              <p className="text-white/40 text-sm mt-2">
+                {q.explanation}
+              </p>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* ORDER */}
-      {activeTab === "order" && unlockOrder && (
-        <div>
-          <p className="mb-4">Ordering unlocked</p>
-          <button
-            onClick={() => {
-              setXp((x) => x + 50);
-              setActiveTab("decide");
-            }}
-            className="w-full py-3 rounded-full"
-            style={{ background: "oklch(0.72 0.18 350)" }}
-          >
-            Complete Order →
-          </button>
-        </div>
+      {/* ───────── SWIPE ───────── */}
+      {activeTab === "decide" && chapter.swipeScenario && (
+        <SwipeCard scenario={chapter.swipeScenario} />
       )}
-
-      {/* DECIDE */}
-      {activeTab === "decide" && unlockDecide && (
-        <div>
-          <SwipeCard scenario={chapter.swipeScenarios[0]} />
-        </div>
-      )}
-
     </main>
   );
 }
