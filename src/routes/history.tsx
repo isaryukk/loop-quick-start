@@ -1,227 +1,317 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { chapters } from "../data/chapters";
+
+/* ─────────────────────────────────────────────
+   TYPES
+───────────────────────────────────────────── */
+
+type TabType = "learn" | "quiz" | "order" | "decide";
+
+type SwipeScenario = {
+  situation: string;
+  context: string;
+  leftChoice: string;
+  rightChoice: string;
+  leftOutcome: any;
+  rightOutcome: any;
+  date: string;
+};
+
+type Chapter = {
+  id: number;
+  title: string;
+  date: string;
+  keyFigure: string;
+  isUnlocked: boolean;
+  isCompleted: boolean;
+
+  learn: string[];
+
+  questions: {
+    text: string;
+    options: string[];
+    correct: number;
+    explanation: string;
+  }[];
+
+  orderingEvents: {
+    id: string;
+    text: string;
+    correctOrder: number;
+  }[];
+
+  swipeScenarios: SwipeScenario[];
+};
+
+/* ─────────────────────────────────────────────
+   CHAPTER DATA (EXPANDED)
+───────────────────────────────────────────── */
+
+const chapters: Chapter[] = [
+  {
+    id: 1,
+    title: "The Crisis Begins",
+    date: "1788–1789",
+    keyFigure: "Louis XVI",
+    isUnlocked: true,
+    isCompleted: false,
+
+    learn: [
+      "By 1788, France was effectively bankrupt after decades of war spending, including costly support for the American Revolution.",
+      "Two consecutive harvest failures caused bread prices to triple — bread made up ~80% of working-class diets.",
+      "The French taxation system was deeply unequal: the Third Estate paid almost all taxes while nobles and clergy were largely exempt.",
+      "Public anger shifted from frustration to political consciousness — people began questioning the legitimacy of the monarchy itself.",
+      "Louis XVI was widely seen as indecisive, which weakened royal authority at a critical moment."
+    ],
+
+    questions: Array.from({ length: 10 }).map((_, i) => ({
+      text: `Sample question ${i + 1} about crisis causes?`,
+      options: ["A", "B", "C", "D"],
+      correct: 0,
+      explanation: "Explanation placeholder."
+    })),
+
+    orderingEvents: Array.from({ length: 5 }).map((_, i) => ({
+      id: `e${i}`,
+      text: `Key event ${i + 1}`,
+      correctOrder: i
+    })),
+
+    swipeScenarios: Array.from({ length: 5 }).map((_, i) => ({
+      situation: `Crisis decision ${i + 1}`,
+      context: "Economic pressure is rising.",
+      leftChoice: "Raise taxes",
+      rightChoice: "Reform system",
+      leftOutcome: { text: "Unrest increases" },
+      rightOutcome: { text: "Slow reform begins" },
+      date: "1789"
+    }))
+  },
+
+  {
+    id: 2,
+    title: "Estates-General",
+    date: "1789",
+    keyFigure: "Louis XVI",
+
+    isUnlocked: false,
+    isCompleted: false,
+
+    learn: [
+      "The Estates-General was called for the first time since 1614 — showing how severe the crisis had become.",
+      "It consisted of three estates: clergy, nobility, and the Third Estate (everyone else).",
+      "The Third Estate represented ~98% of the population but had the same voting power as the other two combined.",
+      "Disputes over voting structure triggered political deadlock almost immediately.",
+      "This moment marked the transition from economic crisis to full political revolution."
+    ],
+
+    questions: [],
+    orderingEvents: [],
+    swipeScenarios: []
+  }
+];
+
+/* ─────────────────────────────────────────────
+   SWIPE CARD
+───────────────────────────────────────────── */
+
+function SwipeCard({ scenario }: { scenario: SwipeScenario }) {
+  const [dragX, setDragX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [stage, setStage] = useState<"card" | "outcome" | "history">("card");
+  const [outcome, setOutcome] = useState<"left" | "right" | null>(null);
+
+  const startX = useState({ current: 0 })[0];
+
+  const THRESHOLD = 80;
+
+  const rotation = Math.min(Math.max(dragX / 14, -22), 22);
+
+  const handleStart = (x: number) => {
+    setIsDragging(true);
+    startX.current = x;
+  };
+
+  const handleMove = (x: number) => {
+    if (!isDragging) return;
+    setDragX(x - startX.current);
+  };
+
+  const handleEnd = () => {
+    setIsDragging(false);
+
+    if (dragX > THRESHOLD) {
+      setOutcome("right");
+      setStage("outcome");
+    } else if (dragX < -THRESHOLD) {
+      setOutcome("left");
+      setStage("outcome");
+    }
+
+    setDragX(0);
+  };
+
+  if (stage === "outcome") {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-5 animate-pulse">
+        <h3 className="text-white font-bold mb-2">Outcome</h3>
+        <p className="text-white/70">
+          {outcome === "left"
+            ? scenario.leftOutcome.text
+            : scenario.rightOutcome.text}
+        </p>
+
+        <button
+          onClick={() => setStage("history")}
+          className="mt-4 w-full rounded-full py-2 font-bold text-white"
+          style={{ background: "oklch(0.72 0.18 350)" }}
+        >
+          Continue →
+        </button>
+      </div>
+    );
+  }
+
+  if (stage === "history") {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-5 animate-in fade-in">
+        <h3 className="text-white font-bold mb-2">Historical Outcome</h3>
+        <p className="text-white/70">
+          This decision mirrors real tensions that escalated the French Revolution.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="rounded-2xl border border-white/20 p-5 bg-white/5"
+      style={{
+        transform: `rotate(${rotation}deg) translateX(${dragX * 0.2}px)`
+      }}
+      onMouseDown={(e) => handleStart(e.clientX)}
+      onMouseMove={(e) => handleMove(e.clientX)}
+      onMouseUp={handleEnd}
+    >
+      <h3 className="text-white font-bold mb-2">{scenario.situation}</h3>
+      <p className="text-white/70 mb-4">{scenario.context}</p>
+
+      <div className="flex justify-between text-sm text-white/60">
+        <span>{scenario.leftChoice}</span>
+        <span>{scenario.rightChoice}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   MAIN PAGE
+───────────────────────────────────────────── */
 
 export const Route = createFileRoute("/history")({
   component: HistoryPage,
 });
 
-type Tab = "learn" | "quiz" | "order" | "decide";
-
-export default function HistoryPage() {
-  const chapter = chapters[0];
-
-  const [tab, setTab] = useState<Tab>("learn");
-  const [quizIndex, setQuizIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, number>>({});
+function HistoryPage() {
+  const [selectedId, setSelectedId] = useState<number | null>(1);
+  const [activeTab, setActiveTab] = useState<TabType>("learn");
   const [xp, setXp] = useState(0);
+  const [quizScore, setQuizScore] = useState(0);
 
-  const score = useMemo(() => {
-    return chapter.questions.reduce((acc, q, i) => {
-      return answers[i] === q.correct ? acc + 1 : acc;
-    }, 0);
-  }, [answers, chapter.questions]);
+  const chapter = chapters.find((c) => c.id === selectedId)!;
 
-  const quizPassed = score >= 7;
-
-  const orderUnlocked = quizPassed;
-  const decideUnlocked = quizPassed;
-
-  const currentQ = chapter.questions[quizIndex];
-
-  const addXP = (amount: number) => {
-    setXp((p) => p + amount);
-  };
+  const unlockOrder = quizScore >= 7;
+  const unlockDecide = xp >= 50;
 
   return (
-    <main className="min-h-screen bg-background text-white p-6 pb-24">
+    <main className="min-h-screen bg-black text-white px-6 py-10">
 
       {/* HEADER */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-black">{chapter.title}</h1>
-        <p className="text-white/60 text-sm">{chapter.date}</p>
-        <p className="text-pink-400 font-bold mt-2">XP: {xp}</p>
-      </div>
+      <h1 className="text-3xl font-black mb-2">French Revolution</h1>
+      <p className="text-white/60 mb-6">Progressive history game</p>
 
-      {/* TAB BUTTONS */}
+      {/* TABS */}
       <div className="flex gap-2 mb-6">
-        {["learn", "quiz", "order", "decide"].map((t) => {
-          const disabled =
-            (t === "quiz" && tab === "learn") ||
-            (t === "order" && !quizPassed) ||
-            (t === "decide" && !orderUnlocked);
-
-          return (
-            <button
-              key={t}
-              disabled={disabled}
-              onClick={() => setTab(t as Tab)}
-              className={`px-4 py-2 rounded-full text-sm font-bold ${
-                tab === t
-                  ? "text-white"
-                  : "text-white/50 bg-white/10"
-              }`}
-              style={
-                tab === t
-                  ? { background: "oklch(0.72 0.18 350)" }
-                  : {}
-              }
-            >
-              {t.toUpperCase()}
-            </button>
-          );
-        })}
+        {(["learn", "quiz", "order", "decide"] as TabType[]).map((t) => (
+          <button
+            key={t}
+            onClick={() => setActiveTab(t)}
+            className="px-4 py-2 rounded-full text-sm font-bold"
+            style={{
+              background:
+                activeTab === t ? "oklch(0.72 0.18 350)" : "rgba(255,255,255,0.1)"
+            }}
+          >
+            {t}
+          </button>
+        ))}
       </div>
 
       {/* LEARN */}
-      {tab === "learn" && (
+      {activeTab === "learn" && (
         <div className="space-y-4">
-          <h2 className="text-xl font-black text-pink-300">
-            Key Context
-          </h2>
-
-          <p className="text-white/70 leading-relaxed">
-            {chapter.description}
-          </p>
-
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-            <p className="text-xs text-white/50 uppercase mb-2">
-              Key Figure
+          {chapter.learn.map((p, i) => (
+            <p key={i} className="text-white/70 leading-relaxed">
+              {p}
             </p>
-            <p className="font-bold">{chapter.keyFigure}</p>
-          </div>
-
-          <p className="text-sm text-white/60 leading-relaxed">
-            France in 1789 was collapsing under financial strain, food shortages,
-            political paralysis, and growing public anger. The monarchy was losing
-            legitimacy faster than it could respond.
-          </p>
+          ))}
+          <button
+            onClick={() => setActiveTab("quiz")}
+            className="mt-4 w-full rounded-full py-3 font-bold text-white"
+            style={{ background: "oklch(0.72 0.18 350)" }}
+          >
+            Start Quiz →
+          </button>
         </div>
       )}
 
       {/* QUIZ */}
-      {tab === "quiz" && (
+      {activeTab === "quiz" && (
         <div>
-          {quizIndex >= chapter.questions.length ? (
-            <div>
-              <h2 className="text-xl font-black mb-2">Quiz Complete</h2>
-              <p className="text-white/70 mb-4">
-                Score: {score} / {chapter.questions.length}
-              </p>
+          <p className="mb-4">Quiz Score: {quizScore}</p>
+          <button
+            onClick={() => setQuizScore((s) => Math.min(10, s + 1))}
+            className="w-full py-3 rounded-full bg-white/10 mb-2"
+          >
+            Answer Correct (+1)
+          </button>
 
-              {score >= 7 ? (
-                <button
-                  onClick={() => {
-                    addXP(50);
-                    setTab("order");
-                  }}
-                  className="w-full py-3 rounded-full font-bold"
-                  style={{ background: "oklch(0.72 0.18 350)" }}
-                >
-                  Continue to Order →
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    setQuizIndex(0);
-                    setAnswers({});
-                  }}
-                  className="w-full py-3 rounded-full font-bold bg-white/10"
-                >
-                  Retry Quiz
-                </button>
-              )}
-            </div>
-          ) : (
-            <div>
-              <h2 className="text-lg font-black mb-3">
-                Question {quizIndex + 1}
-              </h2>
-
-              <p className="mb-4 text-white/70">
-                {currentQ.text}
-              </p>
-
-              <div className="space-y-2">
-                {currentQ.options.map((opt, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      if (answers[quizIndex] === undefined) {
-                        setAnswers((p) => ({ ...p, [quizIndex]: i }));
-                      }
-                    }}
-                    className="w-full p-3 rounded-xl text-left bg-white/5 border border-white/10"
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-
-              {answers[quizIndex] !== undefined && (
-                <button
-                  onClick={() => setQuizIndex((p) => p + 1)}
-                  className="mt-4 w-full py-3 rounded-full font-bold"
-                  style={{ background: "oklch(0.72 0.18 350)" }}
-                >
-                  Next →
-                </button>
-              )}
-            </div>
+          {quizScore >= 7 && (
+            <button
+              onClick={() => setActiveTab("order")}
+              className="w-full py-3 rounded-full"
+              style={{ background: "oklch(0.72 0.18 350)" }}
+            >
+              Unlock Order →
+            </button>
           )}
         </div>
       )}
 
       {/* ORDER */}
-      {tab === "order" && (
+      {activeTab === "order" && unlockOrder && (
         <div>
-          <h2 className="text-xl font-black mb-4">Order Events</h2>
-
-          <div className="space-y-3">
-            {chapter.orderingEvents.map((e) => (
-              <div
-                key={e.id}
-                className="p-3 rounded-xl bg-white/5 border border-white/10"
-              >
-                {e.text}
-              </div>
-            ))}
-          </div>
-
-          {orderUnlocked && (
-            <button
-              onClick={() => {
-                addXP(50);
-                setTab("decide");
-              }}
-              className="mt-4 w-full py-3 rounded-full font-bold"
-              style={{ background: "oklch(0.72 0.18 350)" }}
-            >
-              Continue to Decision →
-            </button>
-          )}
+          <p className="mb-4">Ordering unlocked</p>
+          <button
+            onClick={() => {
+              setXp((x) => x + 50);
+              setActiveTab("decide");
+            }}
+            className="w-full py-3 rounded-full"
+            style={{ background: "oklch(0.72 0.18 350)" }}
+          >
+            Complete Order →
+          </button>
         </div>
       )}
 
       {/* DECIDE */}
-      {tab === "decide" && (
+      {activeTab === "decide" && unlockDecide && (
         <div>
-          <h2 className="text-xl font-black mb-3">
-            Final Decision Unlocked
-          </h2>
-
-          <p className="text-white/70">
-            You can now return to the swipe decision mode.
-          </p>
-
-          <button
-            className="mt-4 w-full py-3 rounded-full font-bold"
-            style={{ background: "oklch(0.72 0.18 350)" }}
-          >
-            Enter Decision Mode →
-          </button>
+          <SwipeCard scenario={chapter.swipeScenarios[0]} />
         </div>
       )}
+
     </main>
   );
 }
