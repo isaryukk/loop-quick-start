@@ -44,7 +44,8 @@ async function generateDailyQuestions(): Promise<Question[]> {
     } catch {}
   }
 
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  // ✅ FIX: Cloudflare Workers env access
+  const apiKey = (globalThis as any).VITE_GEMINI_API_KEY;
 
   if (!apiKey) {
     console.warn("Missing Gemini API key");
@@ -66,17 +67,10 @@ Return ONLY valid JSON in this format:
   }
 ]
 
-Topics can include:
-- Politics
-- Economics
-- World News
-- International Relations
-- Science and Tech
-- Environment
+Topics:
+Politics, Economics, World News, International Relations, Science and Tech, Environment.
 
-No markdown.
-No backticks.
-No extra text.
+No markdown. No backticks. No extra text.
 `;
 
   const response = await fetch(
@@ -111,7 +105,18 @@ No extra text.
     .replace(/```/g, "")
     .trim();
 
-  const questions: Question[] = JSON.parse(clean);
+  let questions: Question[];
+
+  try {
+    questions = JSON.parse(clean);
+  } catch (err) {
+    console.error("Failed to parse Gemini response:", clean);
+    return fallbackQuestions;
+  }
+
+  if (!Array.isArray(questions)) {
+    return fallbackQuestions;
+  }
 
   localStorage.setItem(CACHE_KEY, JSON.stringify(questions));
 
@@ -158,7 +163,6 @@ function QuizPage() {
 
   const handleAnswer = (idx: number) => {
     if (selected !== null) return;
-
     setSelected(idx);
 
     if (idx === question.correctAnswer) {
@@ -238,7 +242,6 @@ function QuizPage() {
               <span className="text-sm text-muted-foreground">
                 XP earned
               </span>
-
               <span className="text-xl font-bold">
                 +{xpEarned} XP
               </span>
@@ -248,7 +251,6 @@ function QuizPage() {
               <span className="text-sm text-muted-foreground">
                 Streak
               </span>
-
               <span className="text-sm font-semibold">
                 🔥 {newStreak}{" "}
                 {newStreak === 1 ? "day" : "days"}
@@ -259,9 +261,7 @@ function QuizPage() {
           <button
             onClick={() => navigate({ to: "/home" })}
             className="w-full rounded-full py-3.5 text-sm font-semibold text-white"
-            style={{
-              background: "oklch(0.72 0.18 350)",
-            }}
+            style={{ background: "oklch(0.72 0.18 350)" }}
           >
             Back to Home
           </button>
@@ -345,9 +345,7 @@ function QuizPage() {
         <button
           onClick={handleNext}
           className="relative mt-4 w-full rounded-full py-3.5 text-sm font-semibold text-white"
-          style={{
-            background: "oklch(0.72 0.18 350)",
-          }}
+          style={{ background: "oklch(0.72 0.18 350)" }}
         >
           {currentQ + 1 >= questions.length
             ? "See Results"
