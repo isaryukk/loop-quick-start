@@ -1,14 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { chapters, type Chapter, type Question } from "../data/chapter";
 
 type TabType = "learn" | "quiz" | "order" | "decide";
 
 /* ─────────────────────────────────────────────
-   1. ADAPTIVE DIFFICULTY ENGINE
-   XP < 300       → beginner   (core facts + core questions only)
-   300 ≤ XP < 800 → intermediate (core + key)
-   XP ≥ 800       → advanced   (all tiers)
+   ADAPTIVE DIFFICULTY ENGINE
 ───────────────────────────────────────────── */
 
 function getDifficulty(xp: number, chaptersCompleted: number) {
@@ -37,15 +34,6 @@ function difficultyLabel(d: string) {
   return "Advanced";
 }
 
-/* ─────────────────────────────────────────────
-   2. XP ENGINE
-   Correct answer: +10 (core) / +15 (key) / +20 (analysis) / +25 (stretch)
-   Wrong answer:   +3 XP (still learning)
-   Learn read:     +20 XP
-   Order done:     +25 XP
-   Decide done:    chapter.xpReward
-───────────────────────────────────────────── */
-
 function xpForCorrect(tier: Question["tier"]): number {
   if (tier === "core") return 10;
   if (tier === "key") return 15;
@@ -54,10 +42,42 @@ function xpForCorrect(tier: Question["tier"]): number {
 }
 
 /* ─────────────────────────────────────────────
-   SWIPE CARD (original logic, same UI)
+   DAILY QUIZ HELPERS
+   - 5 questions per day, selected by date
+   - Resets at midnight each day
 ───────────────────────────────────────────── */
 
-function SwipeCard({ chapter, onComplete }: { chapter: Chapter; onComplete: () => void }) {
+function getTodayKey() {
+  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
+function getDailyQuestions(allQuestions: Question[], chapterId: number): Question[] {
+  const today = getTodayKey();
+  // Simple deterministic seed from today's date + chapterId
+  const seed = today.split("-").reduce((a, b) => a + parseInt(b), chapterId);
+  const shuffled = [...allQuestions].sort((a, b) => {
+    const hashA = (seed * (allQuestions.indexOf(a) + 1) * 31) % 97;
+    const hashB = (seed * (allQuestions.indexOf(b) + 1) * 31) % 97;
+    return hashA - hashB;
+  });
+  return shuffled.slice(0, Math.min(5, shuffled.length));
+}
+
+function getDailyStorageKey(chapterId: number) {
+  return `dailyQuizDone-ch${chapterId}-${getTodayKey()}`;
+}
+
+/* ─────────────────────────────────────────────
+   SWIPE CARD
+───────────────────────────────────────────── */
+
+function SwipeCard({
+  chapter,
+  onComplete,
+}: {
+  chapter: Chapter;
+  onComplete: () => void;
+}) {
   const scenario = chapter.swipeScenario;
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -68,14 +88,8 @@ function SwipeCard({ chapter, onComplete }: { chapter: Chapter; onComplete: () =
 
   const rotation = Math.min(Math.max(dragX / 14, -22), 22);
 
-  const handleStart = (x: number) => {
-    setIsDragging(true);
-    startXRef.current = x;
-  };
-  const handleMove = (x: number) => {
-    if (!isDragging) return;
-    setDragX(x - startXRef.current);
-  };
+  const handleStart = (x: number) => { setIsDragging(true); startXRef.current = x; };
+  const handleMove = (x: number) => { if (!isDragging) return; setDragX(x - startXRef.current); };
   const handleEnd = () => {
     setIsDragging(false);
     const dir = dragX > THRESHOLD ? "right" : dragX < -THRESHOLD ? "left" : null;
@@ -91,29 +105,25 @@ function SwipeCard({ chapter, onComplete }: { chapter: Chapter; onComplete: () =
         <p className="text-white/40 text-xs mb-1 uppercase tracking-widest">
           {outcome === "left" ? scenario.leftChoice : scenario.rightChoice}
         </p>
-        <h3 className="font-bold mb-2 text-lg">{chosen.title}</h3>
+        <h3 className="font-bold text-lg mb-2">{chosen.title}</h3>
         <p className="text-white/70 mb-4">{chosen.text}</p>
         <div className="flex gap-2 flex-wrap mb-4">
           {chosen.reactions.map((r, i) => (
             <span
               key={i}
-              className="px-3 py-1 rounded-full text-xs font-bold"
+              className="px-3 py-1 rounded-full text-xs font-bold text-white"
               style={{
                 background:
-                  r.color === "red" ? "oklch(0.65 0.22 25)" :
-                  r.color === "green" ? "oklch(0.65 0.18 145)" :
-                  "oklch(0.6 0 0)",
-                color: "white",
+                  r.color === "red" ? "oklch(0.55 0.22 25)" :
+                  r.color === "green" ? "oklch(0.55 0.18 145)" :
+                  "oklch(0.45 0 0)",
               }}
             >
               {r.label}
             </span>
           ))}
         </div>
-        <button
-          onClick={() => setStage("history")}
-          className="mt-1 px-4 py-2 rounded-full bg-pink-500 text-white font-bold w-full"
-        >
+        <button onClick={() => setStage("history")} className="w-full px-4 py-2 rounded-full bg-pink-500 text-white font-bold">
           See Historical Context →
         </button>
       </div>
@@ -123,13 +133,10 @@ function SwipeCard({ chapter, onComplete }: { chapter: Chapter; onComplete: () =
   if (stage === "history") {
     return (
       <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-        <p className="text-white/40 text-xs mb-1 uppercase tracking-widest">Historical Reality</p>
-        <h3 className="font-bold mb-2 text-lg">{chosen?.title}</h3>
-        <p className="text-white/70 mb-5">{chosen?.historical}</p>
-        <button
-          onClick={onComplete}
-          className="w-full px-4 py-2 rounded-full bg-pink-500 text-white font-bold"
-        >
+        <p className="text-white/40 text-xs mb-1 uppercase tracking-widest">What Actually Happened</p>
+        <h3 className="font-bold text-lg mb-2">{chosen?.title}</h3>
+        <p className="text-white/70 mb-6">{chosen?.historical}</p>
+        <button onClick={onComplete} className="w-full px-4 py-2 rounded-full bg-pink-500 text-white font-bold">
           Complete Chapter ✓
         </button>
       </div>
@@ -142,17 +149,17 @@ function SwipeCard({ chapter, onComplete }: { chapter: Chapter; onComplete: () =
   return (
     <div>
       <div className="flex justify-between text-sm mb-3 px-1">
-        <span className="font-bold transition-opacity" style={{ opacity: leftActive ? 1 : 0.3 }}>
+        <span className="font-bold transition-opacity" style={{ opacity: leftActive ? 1 : 0.35 }}>
           ← {scenario.leftChoice}
         </span>
-        <span className="font-bold transition-opacity" style={{ opacity: rightActive ? 1 : 0.3 }}>
+        <span className="font-bold transition-opacity" style={{ opacity: rightActive ? 1 : 0.35 }}>
           {scenario.rightChoice} →
         </span>
       </div>
       <div
-        className="p-4 rounded-xl bg-white/5 border border-white/10 cursor-grab active:cursor-grabbing select-none"
+        className="p-5 rounded-xl bg-white/5 border border-white/10 cursor-grab active:cursor-grabbing select-none"
         style={{
-          transform: `rotate(${rotation}deg) translateX(${dragX * 0.15}px)`,
+          transform: `rotate(${rotation}deg) translateX(${dragX * 0.12}px)`,
           transition: isDragging ? "none" : "transform 0.3s ease",
         }}
         onMouseDown={(e) => handleStart(e.clientX)}
@@ -165,8 +172,8 @@ function SwipeCard({ chapter, onComplete }: { chapter: Chapter; onComplete: () =
       >
         <p className="text-white/40 text-xs mb-1">{scenario.date}</p>
         <h3 className="font-bold mb-2">{scenario.situation}</h3>
-        <p className="text-white/70 mb-3">{scenario.context}</p>
-        <p className="text-center text-white/40 text-sm">← Swipe to decide →</p>
+        <p className="text-white/70 mb-4">{scenario.context}</p>
+        <p className="text-center text-white/40 text-sm mt-2">← Swipe to choose →</p>
       </div>
     </div>
   );
@@ -199,11 +206,11 @@ function OrderingGame({ chapter, onComplete }: { chapter: Chapter; onComplete: (
 
   if (checked && isCorrect) {
     return (
-      <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
+      <div className="p-5 rounded-xl bg-white/5 border border-white/10 text-center">
         <div className="text-4xl mb-3">✅</div>
         <h3 className="font-bold text-lg mb-2">Perfect Order!</h3>
-        <p className="text-white/60 mb-5">You correctly sequenced all events.</p>
-        <button onClick={onComplete} className="w-full px-4 py-2 rounded-full bg-pink-500 text-white font-bold">
+        <p className="text-white/60 mb-5">You correctly placed all {items.length} events.</p>
+        <button onClick={onComplete} className="w-full px-4 py-3 rounded-full bg-pink-500 text-white font-bold">
           Continue to Decide →
         </button>
       </div>
@@ -212,7 +219,8 @@ function OrderingGame({ chapter, onComplete }: { chapter: Chapter; onComplete: (
 
   return (
     <div>
-      <p className="text-white/50 text-sm mb-4">Drag to reorder into the correct chronological sequence.</p>
+      <p className="text-white/50 text-sm mb-1">Put these events in the correct chronological order.</p>
+      <p className="text-white/30 text-xs mb-4">Drag and drop to reorder, then press Check Order.</p>
       <div className="space-y-2 mb-5">
         {items.map((item, i) => (
           <div
@@ -224,7 +232,7 @@ function OrderingGame({ chapter, onComplete }: { chapter: Chapter; onComplete: (
               if (dragIndex !== null && dragIndex !== i) moveItem(dragIndex, i);
               setDragIndex(null);
             }}
-            className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border cursor-grab"
+            className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border cursor-grab select-none"
             style={{
               borderColor:
                 checked && !isCorrect && item.correctIndex !== i
@@ -232,18 +240,20 @@ function OrderingGame({ chapter, onComplete }: { chapter: Chapter; onComplete: (
                   : "rgba(255,255,255,0.1)",
             }}
           >
-            <span className="text-white/30 text-sm w-5 text-center">{i + 1}</span>
-            <span className="text-white/80 text-sm flex-1">{item.text}</span>
-            <span className="text-white/20">⠿</span>
+            <span className="text-white/30 text-sm w-5 shrink-0 text-center font-mono">{i + 1}</span>
+            <span className="text-white/80 text-sm flex-1 leading-snug">{item.text}</span>
+            <span className="text-white/20 text-lg shrink-0">⠿</span>
           </div>
         ))}
       </div>
       {checked && !isCorrect && (
-        <p className="text-white/50 text-sm mb-3 text-center">Not quite — red items are out of order. Try again.</p>
+        <p className="text-white/50 text-sm mb-3 text-center">
+          Not quite — items with a red border are out of place. Try again.
+        </p>
       )}
       <button
-        onClick={checked && !isCorrect ? () => setChecked(false) : checkOrder}
-        className="w-full px-4 py-2 rounded-full bg-pink-500 text-white font-bold"
+        onClick={checked && !isCorrect ? () => { setChecked(false); setIsCorrect(null); } : checkOrder}
+        className="w-full px-4 py-3 rounded-full bg-pink-500 text-white font-bold"
       >
         {checked && !isCorrect ? "Try Again" : "Check Order"}
       </button>
@@ -252,7 +262,11 @@ function OrderingGame({ chapter, onComplete }: { chapter: Chapter; onComplete: (
 }
 
 /* ─────────────────────────────────────────────
-   3. REAL MCQ QUIZ
+   REAL MCQ QUIZ
+   - Shows one question at a time
+   - Answer → colour feedback + explanation shown
+   - Prominent Continue button at bottom
+   - 5 daily questions, resets each new day
 ───────────────────────────────────────────── */
 
 type QuizState = {
@@ -281,89 +295,108 @@ function QuizGame({
   });
 
   const q = questions[state.currentIndex];
+  const progress = (state.currentIndex / questions.length) * 100;
 
   const handleSelect = useCallback(
     (optionIndex: number) => {
       if (state.hasAnswered) return;
-      const isCorrect = optionIndex === q.correct;
-      onXpGain(isCorrect ? xpForCorrect(q.tier) : 3);
+      const correct = optionIndex === q.correct;
+      onXpGain(correct ? xpForCorrect(q.tier) : 3);
       setState((prev) => ({
         ...prev,
         selectedOption: optionIndex,
         hasAnswered: true,
-        correctCount: isCorrect ? prev.correctCount + 1 : prev.correctCount,
+        correctCount: correct ? prev.correctCount + 1 : prev.correctCount,
       }));
     },
     [state.hasAnswered, q, onXpGain]
   );
 
   const handleNext = () => {
-    if (state.currentIndex + 1 >= questions.length) {
+    const nextIndex = state.currentIndex + 1;
+    if (nextIndex >= questions.length) {
       setState((prev) => ({ ...prev, isComplete: true }));
       onComplete(state.correctCount, questions.length);
     } else {
       setState((prev) => ({
         ...prev,
-        currentIndex: prev.currentIndex + 1,
+        currentIndex: nextIndex,
         selectedOption: null,
         hasAnswered: false,
       }));
     }
   };
 
+  /* ── Results screen ── */
   if (state.isComplete) {
     const pct = Math.round((state.correctCount / questions.length) * 100);
     return (
-      <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
+      <div className="p-5 rounded-xl bg-white/5 border border-white/10 text-center">
         <div className="text-4xl mb-3">{pct >= 80 ? "🏆" : pct >= 60 ? "📈" : "💪"}</div>
         <h3 className="font-bold text-xl mb-1">Quiz Complete</h3>
-        <p className="text-white/60 mb-4">{state.correctCount}/{questions.length} correct — {pct}% accuracy</p>
-        <div className="w-full bg-white/10 rounded-full h-2 mb-2">
+        <p className="text-white/60 mb-4">
+          {state.correctCount}/{questions.length} correct — {pct}% accuracy
+        </p>
+        <div className="w-full bg-white/10 rounded-full h-2.5 mb-2">
           <div
-            className="h-2 rounded-full"
+            className="h-2.5 rounded-full transition-all duration-700"
             style={{
               width: `${pct}%`,
-              background: pct >= 80 ? "oklch(0.65 0.18 145)" : pct >= 60 ? "oklch(0.75 0.18 80)" : "oklch(0.65 0.22 25)",
+              background: pct >= 80 ? "oklch(0.55 0.18 145)" : pct >= 60 ? "oklch(0.65 0.18 80)" : "oklch(0.65 0.22 25)",
             }}
           />
         </div>
         <p className="text-white/40 text-sm mt-3">
-          {pct >= 80 ? "Excellent — you've mastered this content." : "Keep going — more XP unlocks harder questions."}
+          {pct >= 80
+            ? "Excellent — unlock the Order challenge above."
+            : "Good effort — the Order tab is now unlocked above."}
         </p>
       </div>
     );
   }
 
-  const progress = (state.currentIndex / questions.length) * 100;
-
+  /* ── Question screen ── */
   return (
-    <div>
-      {/* Progress bar */}
-      <div className="w-full bg-white/10 rounded-full h-1.5 mb-4">
-        <div className="h-1.5 rounded-full bg-pink-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+    <div className="flex flex-col">
+      {/* Progress */}
+      <div className="w-full bg-white/10 rounded-full h-1.5 mb-3">
+        <div
+          className="h-1.5 rounded-full bg-pink-500 transition-all duration-500"
+          style={{ width: `${progress}%` }}
+        />
       </div>
       <div className="flex justify-between text-xs text-white/40 mb-4">
         <span>Question {state.currentIndex + 1} of {questions.length}</span>
         <span className="capitalize">{q.tier} level</span>
       </div>
 
-      <p className="font-semibold mb-4 leading-snug">{q.text}</p>
+      {/* Question */}
+      <p className="font-semibold text-base mb-5 leading-snug">{q.text}</p>
 
-      <div className="space-y-2 mb-4">
+      {/* Options */}
+      <div className="space-y-2 mb-5">
         {q.options.map((opt, i) => {
           const isSelected = state.selectedOption === i;
           const isCorrectOption = i === q.correct;
           const show = state.hasAnswered;
 
-          let border = "rgba(255,255,255,0.1)";
+          let border = "rgba(255,255,255,0.12)";
           let bg = "rgba(255,255,255,0.06)";
+          let opacity = 1;
 
           if (show) {
-            if (isCorrectOption) { bg = "rgba(80,200,100,0.15)"; border = "oklch(0.65 0.18 145)"; }
-            else if (isSelected) { bg = "rgba(200,60,60,0.15)"; border = "oklch(0.65 0.22 25)"; }
+            if (isCorrectOption) {
+              bg = "rgba(60,180,90,0.18)";
+              border = "oklch(0.55 0.18 145)";
+            } else if (isSelected) {
+              bg = "rgba(200,60,60,0.18)";
+              border = "oklch(0.65 0.22 25)";
+            } else {
+              opacity = 0.5;
+            }
           } else if (isSelected) {
-            bg = "rgba(255,255,255,0.15)";
-            border = "rgba(255,255,255,0.4)";
+            bg = "rgba(255,255,255,0.14)";
+            border = "rgba(255,255,255,0.5)";
           }
 
           return (
@@ -372,27 +405,32 @@ function QuizGame({
               onClick={() => handleSelect(i)}
               disabled={state.hasAnswered}
               className="block w-full text-left p-3 rounded-xl border text-sm transition-all"
-              style={{ background: bg, borderColor: border }}
+              style={{ background: bg, borderColor: border, opacity }}
             >
-              <span className="text-white/30 mr-2">{String.fromCharCode(65 + i)}.</span>
+              <span className="text-white/30 mr-2 font-mono">{String.fromCharCode(65 + i)}.</span>
               {opt}
             </button>
           );
         })}
       </div>
 
+      {/* Explanation — shown after answering */}
       {state.hasAnswered && (
-        <div className="p-3 rounded-xl bg-white/5 border border-white/10 mb-4">
-          <p className="text-xs text-white/40 mb-1">
+        <div className="rounded-xl bg-white/5 border border-white/10 p-4 mb-5">
+          <p className="text-xs font-bold mb-1.5" style={{ color: state.selectedOption === q.correct ? "oklch(0.65 0.18 145)" : "oklch(0.65 0.22 25)" }}>
             {state.selectedOption === q.correct ? "✓ Correct" : "✗ Incorrect"}
           </p>
           <p className="text-white/70 text-sm leading-relaxed">{q.explanation}</p>
         </div>
       )}
 
+      {/* Continue button — always visible after answering, prominent at bottom */}
       {state.hasAnswered && (
-        <button onClick={handleNext} className="w-full px-4 py-2 rounded-full bg-pink-500 text-white font-bold">
-          {state.currentIndex + 1 >= questions.length ? "See Results →" : "Next Question →"}
+        <button
+          onClick={handleNext}
+          className="w-full px-4 py-3 rounded-full bg-pink-500 text-white font-bold text-base sticky bottom-4"
+        >
+          {state.currentIndex + 1 >= questions.length ? "See Results →" : "Continue →"}
         </button>
       )}
     </div>
@@ -400,7 +438,7 @@ function QuizGame({
 }
 
 /* ─────────────────────────────────────────────
-   PAGE
+   MAIN PAGE
 ───────────────────────────────────────────── */
 
 export const Route = createFileRoute("/history")({
@@ -413,14 +451,30 @@ function HistoryPage() {
   const [chapterIndex, setChapterIndex] = useState(0);
   const [chaptersCompleted, setChaptersCompleted] = useState(0);
 
-  // Track which tabs are done per chapter
+  // Per-chapter completed tabs
   const [completedTabs, setCompletedTabs] = useState<Record<number, Set<TabType>>>({});
   const [quizResults, setQuizResults] = useState<Record<number, { correct: number; total: number }>>({});
 
   const chapter = chapters[chapterIndex];
   const difficulty = getDifficulty(xp, chaptersCompleted);
+  const allQuestions = getFilteredQuestions(chapter.questions, difficulty);
+
+  // Daily quiz: 5 questions selected by today's date
+  const [dailyQuestions] = useState(() => getDailyQuestions(allQuestions, chapter.id));
+
+  // Check if today's quiz is already done (persisted in localStorage)
+  const [dailyDone, setDailyDone] = useState(() => {
+    try { return localStorage.getItem(getDailyStorageKey(chapter.id)) === "done"; } catch { return false; }
+  });
+
+  // Recompute daily state when chapter changes
+  useEffect(() => {
+    try {
+      setDailyDone(localStorage.getItem(getDailyStorageKey(chapter.id)) === "done");
+    } catch { /* localStorage unavailable */ }
+  }, [chapter.id]);
+
   const learnContent = getLearnContent(chapter, difficulty);
-  const filteredQuestions = getFilteredQuestions(chapter.questions, difficulty);
 
   const doneTabs = completedTabs[chapter.id] ?? new Set<TabType>();
   const quizUnlocked = doneTabs.has("learn");
@@ -439,16 +493,27 @@ function HistoryPage() {
     [chapter.id]
   );
 
-  const handleLearnDone = () => { markDone("learn"); addXp(20); setActiveTab("quiz"); };
+  const handleLearnDone = () => {
+    markDone("learn");
+    addXp(20);
+    setActiveTab("quiz");
+  };
 
   const handleQuizDone = (correct: number, total: number) => {
     setQuizResults((prev) => ({ ...prev, [chapter.id]: { correct, total } }));
     markDone("quiz");
+    // Mark daily quiz as complete for today
+    try { localStorage.setItem(getDailyStorageKey(chapter.id), "done"); } catch { /* ok */ }
+    setDailyDone(true);
     const pct = correct / total;
     addXp(pct >= 0.8 ? 30 : pct >= 0.6 ? 15 : 5);
   };
 
-  const handleOrderDone = () => { markDone("order"); addXp(25); setActiveTab("decide"); };
+  const handleOrderDone = () => {
+    markDone("order");
+    addXp(25);
+    setActiveTab("decide");
+  };
 
   const handleDecideDone = () => {
     markDone("decide");
@@ -456,10 +521,10 @@ function HistoryPage() {
     setChaptersCompleted((c) => c + 1);
   };
 
-  // XP bar calc
-  const xpTarget = difficulty === "beginner" ? 300 : difficulty === "intermediate" ? 800 : 800;
+  // XP bar
+  const xpTarget = difficulty === "beginner" ? 300 : 800;
   const xpBase = difficulty === "beginner" ? 0 : 300;
-  const xpProgress = Math.min(((xp - xpBase) / (xpTarget - xpBase)) * 100, 100);
+  const xpProgress = difficulty === "advanced" ? 100 : Math.min(((xp - xpBase) / (xpTarget - xpBase)) * 100, 100);
 
   const tabs: { id: TabType; label: string; locked: boolean }[] = [
     { id: "learn", label: "Learn", locked: false },
@@ -469,58 +534,60 @@ function HistoryPage() {
   ];
 
   return (
-    <main className="min-h-screen p-6">
+    <main className="min-h-screen p-6 max-w-2xl mx-auto">
 
-      {/* HEADER */}
+      {/* Header */}
       <h1 className="text-2xl font-bold mb-1">French Revolution Learning Path</h1>
-      <p className="text-white/50 mb-2 text-sm">
-        Chapter {chapter.id}: {chapter.title}
-      </p>
+      <p className="text-white/50 mb-4 text-sm">Chapter {chapter.id}: {chapter.title}</p>
 
-      {/* XP + DIFFICULTY */}
+      {/* XP + Difficulty */}
       <div className="mb-5">
         <div className="flex justify-between text-xs text-white/50 mb-1">
           <span>{difficultyLabel(difficulty)} tier</span>
           <span>{xp} XP{difficulty !== "advanced" ? ` / ${xpTarget}` : " — max tier"}</span>
         </div>
         <div className="w-full bg-white/10 rounded-full h-2">
-          <div
-            className="h-2 rounded-full bg-pink-500 transition-all duration-700"
-            style={{ width: `${difficulty === "advanced" ? 100 : xpProgress}%` }}
-          />
+          <div className="h-2 rounded-full bg-pink-500 transition-all duration-700" style={{ width: `${xpProgress}%` }} />
         </div>
         <p className="text-white/30 text-xs mt-1">
           {difficulty === "beginner" && `${300 - xp} XP to unlock Intermediate content`}
           {difficulty === "intermediate" && `${800 - xp} XP to unlock Advanced content`}
-          {difficulty === "advanced" && "All content unlocked"}
+          {difficulty === "advanced" && "All content tiers unlocked"}
         </p>
       </div>
 
-      {/* CHAPTER SELECTOR */}
+      {/* Chapter selector */}
       <div className="flex gap-2 flex-wrap mb-6">
         {chapters.map((c, i) => {
           const unlocked = i === 0 || chaptersCompleted >= i;
+          const done = completedTabs[c.id]?.has("decide");
           return (
             <button
               key={c.id}
-              onClick={() => { if (unlocked) { setChapterIndex(i); setActiveTab("learn"); } }}
+              onClick={() => {
+                if (unlocked) { setChapterIndex(i); setActiveTab("learn"); }
+              }}
               className={`px-3 py-1 rounded-full text-sm font-bold transition-all ${
-                i === chapterIndex ? "bg-pink-500 text-white" : unlocked ? "bg-white/10 text-white" : "bg-white/5 text-white/25 cursor-not-allowed"
+                i === chapterIndex
+                  ? "bg-pink-500 text-white"
+                  : unlocked
+                  ? "bg-white/10 text-white"
+                  : "bg-white/5 text-white/25 cursor-not-allowed"
               }`}
             >
-              {!unlocked ? "🔒" : (completedTabs[c.id]?.has("decide") ? "✓" : "")} {c.id}
+              {done ? "✓ " : !unlocked ? "🔒 " : ""}{c.id}
             </button>
           );
         })}
       </div>
 
-      {/* TABS */}
+      {/* Tabs — locked sequentially until each one is complete */}
       <div className="flex gap-2 mb-6">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => !t.locked && setActiveTab(t.id)}
-            className={`flex-1 px-3 py-2 rounded-full text-sm font-bold transition-all ${
+            className={`flex-1 py-2 rounded-full text-sm font-bold transition-all ${
               activeTab === t.id
                 ? "bg-pink-500 text-white"
                 : t.locked
@@ -534,24 +601,30 @@ function HistoryPage() {
         ))}
       </div>
 
-      {/* ── LEARN ── */}
+      {/* ══ LEARN ══ */}
       {activeTab === "learn" && (
         <div>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center mb-5">
             <span className="text-xs px-3 py-1 rounded-full bg-pink-500 text-white font-bold">
               {difficultyLabel(difficulty)} content
             </span>
-            <span className="text-white/30 text-xs">{learnContent.length} facts</span>
+            <span className="text-white/30 text-xs">{learnContent.length} sections</span>
           </div>
-          <div className="space-y-3 mb-6">
+
+          {/* Rich paragraphs with spacing */}
+          <div className="space-y-5 mb-8">
             {learnContent.map((text, i) => (
-              <p key={i} className="text-white/70 leading-relaxed">{text}</p>
+              <div key={i} className="border-l-2 border-white/10 pl-4">
+                <p className="text-white/75 leading-relaxed text-sm">{text}</p>
+              </div>
             ))}
           </div>
-          <div className="text-white/40 text-sm mb-4">XP: {xp} | Tier: {difficultyLabel(difficulty)}</div>
+
+          <div className="text-white/40 text-xs mb-4">XP: {xp} | Tier: {difficultyLabel(difficulty)}</div>
+
           {!doneTabs.has("learn") ? (
-            <button onClick={handleLearnDone} className="w-full px-4 py-2 rounded-full bg-pink-500 text-white font-bold">
-              I've read this → Start Quiz (+20 XP)
+            <button onClick={handleLearnDone} className="w-full px-4 py-3 rounded-full bg-pink-500 text-white font-bold">
+              Done Reading → Start Quiz (+20 XP)
             </button>
           ) : (
             <p className="text-center text-white/30 text-sm">✓ Learn complete — head to the Quiz tab</p>
@@ -559,61 +632,84 @@ function HistoryPage() {
         </div>
       )}
 
-      {/* ── QUIZ ── */}
+      {/* ══ QUIZ ══ */}
       {activeTab === "quiz" && (
         <div>
           {!doneTabs.has("quiz") ? (
             <>
-              <p className="text-white/50 text-sm mb-4">
-                {filteredQuestions.length} questions at{" "}
-                <span className="text-pink-400">{difficultyLabel(difficulty)}</span> difficulty
-              </p>
+              {/* Daily quiz info banner */}
+              <div className="flex justify-between items-center mb-4">
+                <p className="text-white/50 text-sm">
+                  {dailyQuestions.length} questions ·{" "}
+                  <span className="text-pink-400">{difficultyLabel(difficulty)}</span>
+                </p>
+                <span className="text-xs bg-white/10 px-2 py-1 rounded-full text-white/50">
+                  Daily Quiz
+                </span>
+              </div>
               <QuizGame
-                key={`quiz-${chapter.id}`}
-                questions={filteredQuestions}
+                key={`quiz-${chapter.id}-${getTodayKey()}`}
+                questions={dailyQuestions}
                 onComplete={handleQuizDone}
                 onXpGain={addXp}
               />
             </>
           ) : (
-            <div className="text-center py-8">
+            <div className="text-center py-10">
               <div className="text-4xl mb-3">✅</div>
-              <p className="font-bold mb-1">Quiz Complete</p>
+              <p className="font-bold mb-1">Today's Quiz Complete</p>
               <p className="text-white/50 text-sm">
                 {quizResults[chapter.id]?.correct}/{quizResults[chapter.id]?.total} correct
               </p>
-              <p className="text-white/30 text-sm mt-1">Head to the Order tab to continue.</p>
+              <p className="text-white/30 text-sm mt-1">
+                Come back tomorrow for a fresh set of questions.
+              </p>
+              <p className="text-white/40 text-sm mt-4">
+                Head to the <span className="text-white/60 font-bold">Order</span> tab to continue →
+              </p>
             </div>
           )}
         </div>
       )}
 
-      {/* ── ORDER ── */}
+      {/* ══ ORDER ══ */}
       {activeTab === "order" && (
         <div>
           {!doneTabs.has("order") ? (
             <OrderingGame key={`order-${chapter.id}`} chapter={chapter} onComplete={handleOrderDone} />
           ) : (
-            <div className="text-center py-8">
+            <div className="text-center py-10">
               <div className="text-4xl mb-3">✅</div>
               <p className="font-bold mb-1">Ordering Complete</p>
-              <p className="text-white/30 text-sm">Head to the Decide tab.</p>
+              <p className="text-white/30 text-sm mt-1">
+                Head to <span className="text-white/60 font-bold">Decide</span> →
+              </p>
             </div>
           )}
         </div>
       )}
 
-      {/* ── DECIDE ── */}
+      {/* ══ DECIDE ══ */}
       {activeTab === "decide" && (
         <div>
           {!doneTabs.has("decide") ? (
             <SwipeCard key={`decide-${chapter.id}`} chapter={chapter} onComplete={handleDecideDone} />
           ) : (
-            <div className="text-center py-8">
+            <div className="text-center py-10">
               <div className="text-4xl mb-3">🏆</div>
-              <p className="font-bold mb-1">Chapter Complete!</p>
+              <p className="font-bold mb-1">Chapter {chapter.id} Complete!</p>
               <p className="text-white/50 text-sm">+{chapter.xpReward} XP earned</p>
-              <p className="text-white/30 text-sm mt-1">Select the next chapter above.</p>
+              {chapterIndex < chapters.length - 1 && (
+                <button
+                  onClick={() => { setChapterIndex(chapterIndex + 1); setActiveTab("learn"); }}
+                  className="mt-5 px-6 py-2 rounded-full bg-pink-500 text-white font-bold"
+                >
+                  Next Chapter →
+                </button>
+              )}
+              {chapterIndex === chapters.length - 1 && (
+                <p className="text-white/30 text-sm mt-4">You've completed all chapters! 🎉</p>
+              )}
             </div>
           )}
         </div>
