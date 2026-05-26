@@ -1,181 +1,320 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Home, BookOpen, MessageSquare, User } from "lucide-react";
+
+/* ─────────────────────────────────────────────
+   src/routes/profile.tsx
+   Profile page — username, avatar, focus hashtag,
+   friends list. All persisted in localStorage.
+───────────────────────────────────────────── */
 
 export const Route = createFileRoute("/profile")({
   component: ProfilePage,
-  head: () => ({ meta: [{ title: "CivicLoop — Profile" }] }),
 });
 
-function getLevel(xp: number): string {
-  if (xp >= 2000) return "Strategist";
-  if (xp >= 1000) return "Scholar";
-  if (xp >= 500) return "Analyst";
-  if (xp >= 200) return "Researcher";
-  return "Observer";
-}
-
-function getNextLevel(xp: number) {
-  if (xp < 200) return { name: "Researcher", xpNeeded: 200 };
-  if (xp < 500) return { name: "Analyst", xpNeeded: 500 };
-  if (xp < 1000) return { name: "Scholar", xpNeeded: 1000 };
-  if (xp < 2000) return { name: "Strategist", xpNeeded: 2000 };
-  return { name: "Max Level", xpNeeded: 2000 };
-}
-
-const badges = [
-  { id: 1, emoji: "∞", label: "5-Day Loop", earned: true },
-  { id: 2, emoji: "📰", label: "News Watcher", earned: true },
-  { id: 3, emoji: "🏛️", label: "Historian", earned: false },
-  { id: 4, emoji: "🤔", label: "Open-Minded", earned: false },
-  { id: 5, emoji: "⭐", label: "Perfect Score", earned: false },
-  { id: 6, emoji: "🌍", label: "Global Citizen", earned: false },
-  { id: 7, emoji: "⚡", label: "Decision Maker", earned: false },
-  { id: 8, emoji: "💬", label: "First Post", earned: false },
-  { id: 9, emoji: "🔢", label: "Order Master", earned: false },
+const AVATARS = [
+  "🦁", "🐯", "🦊", "🐺", "🦅", "🦉", "🐉", "🌙",
+  "⚡", "🔥", "🌊", "🌿", "💎", "🏆", "🎯", "🧠",
+  "📚", "⚔️", "🗺️", "🌍", "🎓", "🔬", "🖊️", "🦋",
 ];
 
+const RANK_LABELS: Record<string, string> = {
+  beginner: "Novice Scholar",
+  intermediate: "Analyst",
+  advanced: "Historian",
+};
+
+type ProfileData = {
+  username: string;
+  avatar: string;
+  focusTag: string;
+  friends: string[];
+};
+
+function loadProfile(): ProfileData {
+  try {
+    const raw = localStorage.getItem("userProfile");
+    if (raw) return JSON.parse(raw);
+  } catch { /* ok */ }
+  return { username: "Scholar", avatar: "📚", focusTag: "#FrenchRevolution", friends: [] };
+}
+
+function saveProfile(data: ProfileData) {
+  try { localStorage.setItem("userProfile", JSON.stringify(data)); } catch { /* ok */ }
+}
+
+function loadStats() {
+  try {
+    return {
+      xp: parseInt(localStorage.getItem("xp") || "0"),
+      chaptersCompleted: parseInt(localStorage.getItem("chaptersCompleted") || "0"),
+      streak: parseInt(localStorage.getItem("streak") || "0"),
+    };
+  } catch {
+    return { xp: 0, chaptersCompleted: 0, streak: 0 };
+  }
+}
+
+/* ─────────────────────────────────────────────
+   COMPONENT
+───────────────────────────────────────────── */
+
 function ProfilePage() {
-  const [xp, setXp] = useState(0);
-  const [loop, setLoop] = useState(0);
+  const [profile, setProfile] = useState<ProfileData>(loadProfile);
+  const [stats] = useState(loadStats);
+  const [editing, setEditing] = useState<"username" | "focus" | "avatar" | null>(null);
+  const [draftUsername, setDraftUsername] = useState(profile.username);
+  const [draftFocus, setDraftFocus] = useState(profile.focusTag);
+  const [friendInput, setFriendInput] = useState("");
+  const [friendError, setFriendError] = useState("");
 
-  useEffect(() => {
-    setXp(parseInt(localStorage.getItem("civicloop_xp") || "0"));
-    setLoop(parseInt(localStorage.getItem("civicloop_streak") || "0"));
-  }, []);
+  // Persist whenever profile changes
+  useEffect(() => { saveProfile(profile); }, [profile]);
 
-  const level = getLevel(xp);
-  const nextLevel = getNextLevel(xp);
-  const progressToNext = Math.min((xp / nextLevel.xpNeeded) * 100, 100);
+  const difficulty =
+    stats.xp >= 800 ? "advanced" : stats.xp >= 300 ? "intermediate" : "beginner";
+
+  const saveUsername = () => {
+    const trimmed = draftUsername.trim();
+    if (trimmed.length < 2) return;
+    setProfile((p) => ({ ...p, username: trimmed }));
+    setEditing(null);
+  };
+
+  const saveFocus = () => {
+    let tag = draftFocus.trim();
+    if (!tag.startsWith("#")) tag = "#" + tag;
+    setProfile((p) => ({ ...p, focusTag: tag }));
+    setEditing(null);
+  };
+
+  const selectAvatar = (a: string) => {
+    setProfile((p) => ({ ...p, avatar: a }));
+    setEditing(null);
+  };
+
+  const addFriend = () => {
+    const trimmed = friendInput.trim();
+    if (!trimmed) return;
+    if (trimmed.toLowerCase() === profile.username.toLowerCase()) {
+      setFriendError("That's you!");
+      return;
+    }
+    if (profile.friends.includes(trimmed)) {
+      setFriendError("Already added.");
+      return;
+    }
+    setProfile((p) => ({ ...p, friends: [...p.friends, trimmed] }));
+    setFriendInput("");
+    setFriendError("");
+  };
+
+  const removeFriend = (name: string) => {
+    setProfile((p) => ({ ...p, friends: p.friends.filter((f) => f !== name) }));
+  };
 
   return (
-    <main className="relative flex min-h-screen flex-col bg-background pb-24 text-foreground">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full opacity-25 blur-3xl"
-        style={{ background: "radial-gradient(circle, oklch(0.72 0.18 350) 0%, transparent 70%)" }}
-      />
+    <main className="min-h-screen p-6 max-w-2xl mx-auto">
 
-      <div className="relative px-6 pt-14">
-        {/* Avatar */}
-        <div className="mb-8 flex flex-col items-center text-center">
-          <div
-            className="mb-4 flex h-24 w-24 items-center justify-center rounded-full border-2 text-2xl font-black"
-            style={{ background: "oklch(0.72 0.18 350 / 0.15)", borderColor: "oklch(0.72 0.18 350 / 0.5)", color: "oklch(0.78 0.18 350)" }}
+      <h1 className="text-2xl font-bold mb-1">Profile</h1>
+      <p className="text-white/50 text-sm mb-6">Customise your identity and track your progress.</p>
+
+      {/* ── Avatar + Username card ── */}
+      <div className="rounded-2xl bg-white/5 border border-white/10 p-5 mb-4">
+        <div className="flex items-center gap-4 mb-4">
+          {/* Avatar */}
+          <button
+            onClick={() => setEditing(editing === "avatar" ? null : "avatar")}
+            className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-3xl hover:bg-white/15 transition-all border border-white/10"
+            title="Change avatar"
           >
-            AL
-          </div>
-          <h1 className="text-2xl font-black text-white">Alex</h1>
-          <div className="mt-2">
-            <span
-              className="rounded-full border px-4 py-1 text-sm font-bold"
-              style={{ color: "oklch(0.78 0.18 350)", background: "oklch(0.72 0.18 350 / 0.12)", borderColor: "oklch(0.72 0.18 350 / 0.35)" }}
-            >
-              {level}
-            </span>
+            {profile.avatar}
+          </button>
+
+          {/* Name + rank */}
+          <div className="flex-1">
+            {editing === "username" ? (
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 bg-white/10 rounded-xl px-3 py-1.5 text-white text-sm border border-white/20 outline-none focus:border-pink-400"
+                  value={draftUsername}
+                  onChange={(e) => setDraftUsername(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && saveUsername()}
+                  maxLength={20}
+                  autoFocus
+                />
+                <button onClick={saveUsername} className="px-3 py-1.5 rounded-xl bg-pink-500 text-white text-sm font-bold">Save</button>
+                <button onClick={() => setEditing(null)} className="px-3 py-1.5 rounded-xl bg-white/10 text-white text-sm">✕</button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold">{profile.username}</h2>
+                <button
+                  onClick={() => { setDraftUsername(profile.username); setEditing("username"); }}
+                  className="text-white/30 hover:text-white/60 text-sm"
+                  title="Edit username"
+                >
+                  ✏️
+                </button>
+              </div>
+            )}
+            <p className="text-white/40 text-sm mt-0.5">{RANK_LABELS[difficulty]}</p>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="mb-4 grid grid-cols-3 gap-3">
-          {[
-            { label: "Total XP", value: xp.toLocaleString() },
-            { label: "Day Loop", value: `∞ ${loop}` },
-            { label: "Quizzes", value: String(loop) },
-          ].map(({ label, value }) => (
-            <div key={label} className="rounded-2xl border border-white/15 bg-white/8 p-3 text-center">
-              <p className="text-xl font-black text-white">{value}</p>
-              <p className="text-xs font-bold text-white/60 mt-0.5">{label}</p>
+        {/* Avatar picker */}
+        {editing === "avatar" && (
+          <div>
+            <p className="text-white/40 text-xs mb-2 uppercase tracking-widest">Choose an avatar</p>
+            <div className="grid grid-cols-8 gap-2">
+              {AVATARS.map((a) => (
+                <button
+                  key={a}
+                  onClick={() => selectAvatar(a)}
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center text-xl transition-all ${
+                    profile.avatar === a ? "bg-pink-500" : "bg-white/10 hover:bg-white/20"
+                  }`}
+                >
+                  {a}
+                </button>
+              ))}
             </div>
-          ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Focus hashtag ── */}
+      <div className="rounded-2xl bg-white/5 border border-white/10 p-5 mb-4">
+        <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Current Focus</p>
+        {editing === "focus" ? (
+          <div className="flex gap-2">
+            <input
+              className="flex-1 bg-white/10 rounded-xl px-3 py-2 text-white text-sm border border-white/20 outline-none focus:border-pink-400"
+              value={draftFocus}
+              onChange={(e) => setDraftFocus(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && saveFocus()}
+              maxLength={30}
+              placeholder="#WhatYoureStudying"
+              autoFocus
+            />
+            <button onClick={saveFocus} className="px-3 py-2 rounded-xl bg-pink-500 text-white text-sm font-bold">Save</button>
+            <button onClick={() => setEditing(null)} className="px-3 py-2 rounded-xl bg-white/10 text-white text-sm">✕</button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between">
+            <span className="text-pink-400 font-bold text-lg">{profile.focusTag}</span>
+            <button
+              onClick={() => { setDraftFocus(profile.focusTag); setEditing("focus"); }}
+              className="text-white/30 hover:text-white/60 text-sm px-2 py-1 rounded-lg hover:bg-white/10 transition-all"
+            >
+              Edit ✏️
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Stats ── */}
+      <div className="rounded-2xl bg-white/5 border border-white/10 p-5 mb-4">
+        <p className="text-white/40 text-xs uppercase tracking-widest mb-3">Your Stats</p>
+        <div className="grid grid-cols-3 gap-4 text-center">
+          <div>
+            <p className="text-2xl font-black">{stats.xp}</p>
+            <p className="text-white/40 text-xs mt-0.5">Total XP</p>
+          </div>
+          <div>
+            <p className="text-2xl font-black">{stats.chaptersCompleted}</p>
+            <p className="text-white/40 text-xs mt-0.5">Chapters Done</p>
+          </div>
+          <div>
+            <p className="text-2xl font-black">{stats.streak}</p>
+            <p className="text-white/40 text-xs mt-0.5">Day Streak</p>
+          </div>
         </div>
 
-        {/* XP progress */}
-        <div className="mb-5 rounded-2xl border border-white/15 bg-white/8 p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-bold text-white/70">Progress to {nextLevel.name}</span>
-            <span className="text-sm font-bold" style={{ color: "oklch(0.78 0.18 350)" }}>
-              {xp} / {nextLevel.xpNeeded} XP
-            </span>
+        {/* Tier progress */}
+        <div className="mt-4">
+          <div className="flex justify-between text-xs text-white/40 mb-1">
+            <span>{RANK_LABELS[difficulty]}</span>
+            <span>{stats.xp} XP</span>
           </div>
-          <div className="h-2.5 w-full rounded-full bg-white/10">
+          <div className="w-full bg-white/10 rounded-full h-2">
             <div
-              className="h-2.5 rounded-full transition-all duration-500"
-              style={{ width: `${progressToNext}%`, background: "oklch(0.72 0.18 350)" }}
+              className="h-2 rounded-full bg-pink-500 transition-all duration-700"
+              style={{
+                width: `${
+                  difficulty === "advanced"
+                    ? 100
+                    : difficulty === "intermediate"
+                    ? Math.min(((stats.xp - 300) / 500) * 100, 100)
+                    : Math.min((stats.xp / 300) * 100, 100)
+                }%`,
+              }}
             />
           </div>
-        </div>
-
-        {/* XP guide */}
-        <div className="mb-5 rounded-2xl border border-white/15 bg-white/8 p-4">
-          <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-white/60">How to earn XP</h2>
-          {[
-            { action: "Complete daily quiz", xp: "+50 XP" },
-            { action: "Perfect quiz score", xp: "+25 XP bonus" },
-            { action: "Complete chapter quiz", xp: "+30 XP" },
-            { action: "Ordering quiz correct", xp: "+15 XP" },
-            { action: "Vote in debate", xp: "+10 XP" },
-            { action: "Post in debate", xp: "+15 XP" },
-            { action: "Swipe decision", xp: "+20 XP" },
-          ].map(({ action, xp: earn }) => (
-            <div key={action} className="flex items-center justify-between py-2 border-b border-white/8 last:border-0">
-              <span className="text-sm font-semibold text-white/70">{action}</span>
-              <span className="text-sm font-black" style={{ color: "oklch(0.78 0.18 350)" }}>{earn}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Badges */}
-        <div className="mb-5">
-          <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-white/60">Badges</h2>
-          <div className="grid grid-cols-3 gap-3">
-            {badges.map((badge) => (
-              <div
-                key={badge.id}
-                className={`flex flex-col items-center rounded-2xl border p-3 text-center ${badge.earned ? "border-white/20 bg-white/8" : "border-white/8 bg-white/3 opacity-40"}`}
-              >
-                <span className={`text-2xl font-black ${!badge.earned ? "grayscale" : ""}`} style={badge.emoji === "∞" ? { color: "oklch(0.78 0.18 350)" } : {}}>
-                  {badge.emoji}
-                </span>
-                <span className="mt-1.5 text-xs font-bold leading-tight text-white/70">{badge.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Level ladder */}
-        <div className="rounded-2xl border border-white/15 bg-white/8 p-5">
-          <h2 className="mb-4 text-sm font-black uppercase tracking-widest text-white/60">Level Ladder</h2>
-          {[
-            { name: "Observer", xp: "0–199 XP" },
-            { name: "Researcher", xp: "200–499 XP" },
-            { name: "Analyst", xp: "500–999 XP" },
-            { name: "Scholar", xp: "1,000–1,999 XP" },
-            { name: "Strategist", xp: "2,000+ XP" },
-          ].map(({ name, xp: xpRange }) => (
-            <div key={name} className="flex items-center justify-between py-2.5 border-b border-white/8 last:border-0">
-              <span
-                className={`text-base ${name === level ? "font-black" : "font-semibold"}`}
-                style={name === level ? { color: "oklch(0.78 0.18 350)" } : { color: "rgba(255,255,255,0.5)" }}
-              >
-                {name === level ? "→ " : ""}{name}
-              </span>
-              <span className="text-sm font-semibold text-white/40">{xpRange}</span>
-            </div>
-          ))}
+          {difficulty !== "advanced" && (
+            <p className="text-white/30 text-xs mt-1">
+              {difficulty === "beginner" ? `${300 - stats.xp} XP to Analyst` : `${800 - stats.xp} XP to Historian`}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 flex items-center justify-around border-t border-white/10 bg-background pb-6 pt-3">
-        <Link to="/home" className="flex flex-col items-center gap-1"><Home className="h-5 w-5 text-white/50" /><span className="text-xs font-medium text-white/50">Home</span></Link>
-        <Link to="/history" className="flex flex-col items-center gap-1"><BookOpen className="h-5 w-5 text-white/50" /><span className="text-xs font-medium text-white/50">History</span></Link>
-        <Link to="/debate" className="flex flex-col items-center gap-1"><MessageSquare className="h-5 w-5 text-white/50" /><span className="text-xs font-medium text-white/50">Debate</span></Link>
-        <Link to="/profile" className="flex flex-col items-center gap-1">
-          <User className="h-5 w-5" style={{ color: "oklch(0.78 0.18 350)" }} />
-          <span className="text-xs font-bold" style={{ color: "oklch(0.78 0.18 350)" }}>Profile</span>
-        </Link>
-      </nav>
+      {/* ── Friends ── */}
+      <div className="rounded-2xl bg-white/5 border border-white/10 p-5 mb-4">
+        <p className="text-white/40 text-xs uppercase tracking-widest mb-3">Friends</p>
+
+        {/* Add friend input */}
+        <div className="flex gap-2 mb-3">
+          <input
+            className="flex-1 bg-white/10 rounded-xl px-3 py-2 text-white text-sm border border-white/20 outline-none focus:border-pink-400"
+            placeholder="Add by username..."
+            value={friendInput}
+            onChange={(e) => { setFriendInput(e.target.value); setFriendError(""); }}
+            onKeyDown={(e) => e.key === "Enter" && addFriend()}
+            maxLength={20}
+          />
+          <button onClick={addFriend} className="px-4 py-2 rounded-xl bg-pink-500 text-white text-sm font-bold">
+            Add
+          </button>
+        </div>
+        {friendError && <p className="text-white/40 text-xs mb-2">{friendError}</p>}
+
+        {profile.friends.length === 0 ? (
+          <p className="text-white/25 text-sm text-center py-4">
+            No friends added yet — type a username above.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {profile.friends.map((name) => (
+              <div key={name} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-sm">
+                    👤
+                  </div>
+                  <span className="text-white/80 text-sm font-medium">{name}</span>
+                </div>
+                <button
+                  onClick={() => removeFriend(name)}
+                  className="text-white/20 hover:text-white/50 text-xs px-2 py-1 rounded-lg hover:bg-white/10 transition-all"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Coming soon ── */}
+      <div className="rounded-2xl bg-white/5 border border-white/10 p-5 opacity-60">
+        <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Coming Soon</p>
+        <div className="space-y-1.5 text-sm text-white/50">
+          <p>📊 Accuracy breakdown by topic (Politics, Economics, Military...)</p>
+          <p>🏅 Seasonal rankings and debate ELO</p>
+          <p>📈 Adaptive difficulty — questions matched to your weak areas</p>
+          <p>🔥 Streak rewards and XP multipliers</p>
+        </div>
+      </div>
+
     </main>
   );
 }
