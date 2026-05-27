@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef } from "react";
-import { chapters } from "../data/chapters";
+import { chapters } from "../data/chapter";
 
 export const Route = createFileRoute("/swipe-decision")({
   component: SwipeDecisionPage,
@@ -8,14 +8,11 @@ export const Route = createFileRoute("/swipe-decision")({
 
 function SwipeDecisionPage() {
   const navigate = useNavigate();
-
   const chapter = chapters[0];
-
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [stage, setStage] = useState<"card" | "outcome" | "history">("card");
   const [outcome, setOutcome] = useState<"left" | "right" | null>(null);
-
   const startX = useRef(0);
   const THRESHOLD = 90;
 
@@ -31,7 +28,6 @@ function SwipeDecisionPage() {
 
   const handleEnd = () => {
     setIsDragging(false);
-
     if (dragX < -THRESHOLD) {
       setOutcome("left");
       setStage("outcome");
@@ -39,7 +35,6 @@ function SwipeDecisionPage() {
       setOutcome("right");
       setStage("outcome");
     }
-
     setDragX(0);
   };
 
@@ -54,10 +49,7 @@ function SwipeDecisionPage() {
     return (
       <main className="min-h-screen bg-background p-6 text-white">
         <h1 className="text-2xl font-black mb-4">What Actually Happened</h1>
-        <p className="text-white/70 leading-relaxed">
-          {o.historical}
-        </p>
-
+        <p className="text-white/70 leading-relaxed">{o.historical}</p>
         <button
           onClick={() => setStage("card")}
           className="mt-6 w-full rounded-full py-3 font-bold"
@@ -74,7 +66,6 @@ function SwipeDecisionPage() {
       <main className="min-h-screen bg-background p-6 text-white">
         <h2 className="text-xl font-black mb-2">{o.title}</h2>
         <p className="text-white/70 mb-4">{o.text}</p>
-
         <button
           onClick={() => setStage("history")}
           className="w-full rounded-full py-3 font-bold"
@@ -91,7 +82,6 @@ function SwipeDecisionPage() {
       <h1 className="text-xl font-black mb-6">
         {chapter.swipeScenario.situation}
       </h1>
-
       <div
         className="p-6 rounded-2xl border border-white/20 bg-white/5"
         style={{
@@ -101,13 +91,17 @@ function SwipeDecisionPage() {
         onMouseDown={(e) => handleStart(e.clientX)}
         onMouseMove={(e) => handleMove(e.clientX)}
         onMouseUp={handleEnd}
+        onTouchStart={(e) => handleStart(e.touches[0].clientX)}
+        onTouchMove={(e) => handleMove(e.touches[0].clientX)}
+        onTouchEnd={handleEnd}
       >
         <p className="text-white/70 mb-4">{chapter.swipeScenario.context}</p>
-
         <div className="flex justify-between text-sm">
-          <span className="text-red-400">{chapter.swipeScenario.leftChoice}</span>
+          <span className="text-red-400">
+            ← {chapter.swipeScenario.leftChoice}
+          </span>
           <span style={{ color: "oklch(0.78 0.18 350)" }}>
-            {chapter.swipeScenario.rightChoice}
+            {chapter.swipeScenario.rightChoice} →
           </span>
         </div>
       </div>
