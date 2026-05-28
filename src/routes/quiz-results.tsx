@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Share2, ArrowRight, Target, TrendingUp, Trophy } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import { Share2, ArrowRight, Target, TrendingUp, Trophy, Home, BookOpen, MessageSquare, User } from "lucide-react";
 
 export const Route = createFileRoute("/quiz-results")({
   component: QuizResultsScreen,
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/quiz-results")({
 function CircularProgress({
   score,
   total,
-  size = 200,
+  size = 180,
   strokeWidth = 10,
 }: {
   score: number;
@@ -24,46 +25,34 @@ function CircularProgress({
 }) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const percentage = score / total;
+  const percentage = total > 0 ? score / total : 0;
   const dashOffset = circumference * (1 - percentage);
 
   return (
     <div className="relative" style={{ width: size, height: size }}>
-      <svg
-        width={size}
-        height={size}
-        className="-rotate-90"
-        viewBox={`0 0 ${size} ${size}`}
-      >
-        {/* Background ring */}
+      <svg width={size} height={size} className="-rotate-90" viewBox={`0 0 ${size} ${size}`}>
         <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="rgba(255,255,255,0.08)"
-          strokeWidth={strokeWidth}
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={strokeWidth}
         />
-        {/* Progress ring */}
         <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
+          cx={size / 2} cy={size / 2} r={radius}
           fill="none"
-          stroke="var(--gold)"
+          stroke="oklch(0.72 0.18 350)"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={dashOffset}
           style={{
             transition: "stroke-dashoffset 1.2s ease-out",
-            filter: "drop-shadow(0 0 8px oklch(0.76 0.13 78 / 0.5))",
+            filter: "drop-shadow(0 0 8px oklch(0.72 0.18 350 / 0.5))",
           }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-5xl font-bold tracking-tight">
-          {score} <span className="text-muted-foreground text-3xl">/ {total}</span>
+        <span className="text-5xl font-black tracking-tight text-white">
+          {score}
+          <span className="text-3xl text-white/40"> / {total}</span>
         </span>
       </div>
     </div>
@@ -83,35 +72,31 @@ function ConfettiPiece({ delay, left, color }: { delay: number; left: number; co
   );
 }
 
-function Confetti() {
+function Confetti({ show }: { show: boolean }) {
+  if (!show) return null;
   const pieces = [
-    { delay: 0, left: 10, color: "oklch(0.76 0.13 78)" },
-    { delay: 0.2, left: 25, color: "oklch(0.65 0.15 140)" },
-    { delay: 0.4, left: 40, color: "oklch(0.7 0.12 220)" },
-    { delay: 0.1, left: 55, color: "oklch(0.76 0.13 78)" },
-    { delay: 0.3, left: 70, color: "oklch(0.65 0.15 140)" },
-    { delay: 0.5, left: 85, color: "oklch(0.7 0.12 220)" },
-    { delay: 0.15, left: 15, color: "oklch(0.7 0.12 220)" },
-    { delay: 0.35, left: 35, color: "oklch(0.76 0.13 78)" },
+    { delay: 0,    left: 10, color: "oklch(0.72 0.18 350)" },
+    { delay: 0.2,  left: 25, color: "oklch(0.65 0.15 140)" },
+    { delay: 0.4,  left: 40, color: "oklch(0.7 0.12 220)"  },
+    { delay: 0.1,  left: 55, color: "oklch(0.72 0.18 350)" },
+    { delay: 0.3,  left: 70, color: "oklch(0.65 0.15 140)" },
+    { delay: 0.5,  left: 85, color: "oklch(0.7 0.12 220)"  },
+    { delay: 0.15, left: 15, color: "oklch(0.7 0.12 220)"  },
+    { delay: 0.35, left: 35, color: "oklch(0.72 0.18 350)" },
     { delay: 0.55, left: 60, color: "oklch(0.65 0.15 140)" },
-    { delay: 0.25, left: 80, color: "oklch(0.76 0.13 78)" },
-    { delay: 0.45, left: 5, color: "oklch(0.65 0.15 140)" },
-    { delay: 0.6, left: 90, color: "oklch(0.7 0.12 220)" },
+    { delay: 0.25, left: 80, color: "oklch(0.72 0.18 350)" },
+    { delay: 0.45, left: 5,  color: "oklch(0.65 0.15 140)" },
+    { delay: 0.6,  left: 90, color: "oklch(0.7 0.12 220)"  },
   ];
-
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-      {pieces.map((p, i) => (
-        <ConfettiPiece key={i} {...p} />
-      ))}
+      {pieces.map((p, i) => <ConfettiPiece key={i} {...p} />)}
     </div>
   );
 }
 
 function StatPill({
-  icon: Icon,
-  label,
-  value,
+  icon: Icon, label, value,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
@@ -119,100 +104,160 @@ function StatPill({
 }) {
   return (
     <div className="flex flex-col items-center gap-1 rounded-2xl bg-white/5 border border-white/10 px-4 py-3 flex-1">
-      <Icon className="w-4 h-4 text-gold mb-0.5" />
-      <span className="text-lg font-bold">{value}</span>
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      <Icon className="w-4 h-4 mb-0.5" style={{ color: "oklch(0.78 0.18 350)" }} />
+      <span className="text-lg font-black text-white">{value}</span>
+      <span className="text-[10px] uppercase tracking-wider text-white/40 font-bold">{label}</span>
     </div>
   );
 }
 
 function QuizResultsScreen() {
+  const navigate = useNavigate();
+  const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [xpEarned, setXpEarned] = useState(50);
+  const [copied, setCopied] = useState(false);
+  const TOTAL = 5;
+
+  useEffect(() => {
+    const s = parseInt(localStorage.getItem("civicloop_last_score") || "0");
+    const st = parseInt(localStorage.getItem("civicloop_streak") || "0");
+    setScore(s);
+    setStreak(st);
+    setXpEarned(50 + (s === TOTAL ? 25 : 0));
+  }, []);
+
+  const pct = Math.round((score / TOTAL) * 100);
+  const isPerfect = score === TOTAL;
+
+  /* ── Share button ── */
+  const handleShare = async () => {
+    const emoji = isPerfect ? "🏆" : score >= 3 ? "⭐" : "📚";
+    const text =
+      `${emoji} I scored ${score}/${TOTAL} on today's CivicLoop quiz!\n` +
+      `🔥 ${streak} day streak\n\n` +
+      `Building my political literacy one day at a time.\n` +
+      `#CivicLoop #PoliticalLiteracy`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      }
+    } catch {
+      // User cancelled share — no action needed
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground flex justify-center relative overflow-hidden">
-      {/* Subtle radial glow */}
+    <div className="min-h-screen bg-background text-white flex justify-center relative overflow-hidden">
       <div
         className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full opacity-20 blur-3xl"
-        style={{
-          background: "radial-gradient(circle, oklch(0.72 0.18 350) 0%, transparent 70%)",
-        }}
+        style={{ background: "radial-gradient(circle, oklch(0.72 0.18 350) 0%, transparent 70%)" }}
       />
 
-      <Confetti />
+      <Confetti show={isPerfect} />
 
       <style>{`
         @keyframes confetti-fall {
-          0% {
-            opacity: 1;
-            transform: translateY(0) rotate(0deg);
-          }
-          100% {
-            opacity: 0;
-            transform: translateY(100vh) rotate(720deg);
-          }
+          0%   { opacity: 1; transform: translateY(0) rotate(0deg); }
+          100% { opacity: 0; transform: translateY(100vh) rotate(720deg); }
         }
         @keyframes xp-pop {
-          0% {
-            opacity: 0;
-            transform: translateY(12px);
-          }
-          60% {
-            opacity: 1;
-            transform: translateY(-4px);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          0%   { opacity: 0; transform: translateY(12px); }
+          60%  { opacity: 1; transform: translateY(-4px); }
+          100% { opacity: 1; transform: translateY(0); }
         }
       `}</style>
 
-      <div className="w-full max-w-md flex flex-col items-center px-6 pt-14 pb-8 relative z-10">
-        {/* Circular score */}
-        <div className="mb-6">
-          <CircularProgress score={4} total={5} size={180} strokeWidth={10} />
+      <div className="w-full max-w-md flex flex-col items-center px-6 pt-14 pb-32 relative z-10">
+
+        {/* Score ring */}
+        <div className="mb-4">
+          <CircularProgress score={score} total={TOTAL} size={180} strokeWidth={10} />
         </div>
 
-        {/* XP */}
-        <div
-          className="mb-4"
-          style={{ animation: "xp-pop 0.7s ease-out 0.3s both" }}
-        >
-          <span className="text-xl font-bold text-gold">+50 XP</span>
+        {/* XP pop */}
+        <div className="mb-2" style={{ animation: "xp-pop 0.7s ease-out 0.3s both" }}>
+          <span className="text-xl font-black" style={{ color: "oklch(0.78 0.18 350)" }}>
+            +{xpEarned} XP
+          </span>
         </div>
 
-        {/* Loop */}
-        <div className="mb-8 text-center">
-          <p className="text-3xl font-bold tracking-tight">
-            <span className="mr-1">🔥</span>5 Day Loop!
+        {/* Streak */}
+        <div className="mb-6 text-center">
+          <p className="text-3xl font-black tracking-tight">
+            🔥 {streak} Day {streak === 1 ? "Loop" : "Loop!"}
           </p>
-          <p className="text-sm text-muted-foreground mt-1">Keep it going — you're on fire.</p>
+          <p className="text-sm text-white/50 font-bold mt-1">
+            {isPerfect
+              ? "Perfect score — you're on fire! 🔥"
+              : score >= 3
+              ? "Great work — keep the loop going."
+              : "Keep learning — every day counts."}
+          </p>
         </div>
 
-        {/* Stats */}
-        <div className="flex gap-3 w-full mb-10">
-          <StatPill icon={Target} label="Accuracy" value="80%" />
-          <StatPill icon={TrendingUp} label="Best Loop" value="7" />
-          <StatPill icon={Trophy} label="Rank" value="#142" />
+        {/* Stat pills */}
+        <div className="flex gap-3 w-full mb-8">
+          <StatPill icon={Target} label="Accuracy" value={`${pct}%`} />
+          <StatPill icon={TrendingUp} label="Streak" value={`${streak}d`} />
+          <StatPill icon={Trophy} label="Score" value={`${score}/${TOTAL}`} />
         </div>
 
         {/* Buttons */}
-        <div className="flex flex-col gap-3 w-full mt-auto">
+        <div className="flex flex-col gap-3 w-full">
+          {/* Share */}
           <button
-            type="button"
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-white/20 bg-transparent text-sm font-semibold transition-colors hover:bg-white/5 active:scale-[0.99]"
+            onClick={handleShare}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-white/20 bg-white/8 text-base font-black transition-all hover:bg-white/12 active:scale-[0.99]"
           >
             <Share2 className="w-4 h-4" />
-            Share Results
+            {copied ? "Copied to clipboard! ✓" : "Share Results"}
           </button>
+
+          {/* Debate CTA */}
           <button
-            type="button"
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gold text-gold-foreground text-sm font-semibold transition-opacity hover:opacity-90 active:scale-[0.99]"
+            onClick={() => navigate({ to: "/debate" })}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-base font-black text-white transition-opacity hover:opacity-90 active:scale-[0.99]"
+            style={{ background: "oklch(0.72 0.18 350)" }}
           >
             See Today's Debate
             <ArrowRight className="w-4 h-4" />
           </button>
+
+          {/* Home */}
+          <button
+            onClick={() => navigate({ to: "/home" })}
+            className="w-full py-3 rounded-2xl text-sm font-black text-white/50 hover:text-white/70 transition-colors"
+          >
+            Back Home
+          </button>
         </div>
       </div>
+
+      {/* Bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-20 flex items-center justify-around border-t border-white/10 bg-background pb-6 pt-3">
+        <Link to="/home" className="flex flex-col items-center gap-1">
+          <Home className="h-5 w-5 text-white/50" />
+          <span className="text-xs font-medium text-white/50">Home</span>
+        </Link>
+        <Link to="/history" className="flex flex-col items-center gap-1">
+          <BookOpen className="h-5 w-5 text-white/50" />
+          <span className="text-xs font-medium text-white/50">History</span>
+        </Link>
+        <Link to="/debate" className="flex flex-col items-center gap-1">
+          <MessageSquare className="h-5 w-5 text-white/50" />
+          <span className="text-xs font-medium text-white/50">Debate</span>
+        </Link>
+        <Link to="/profile" className="flex flex-col items-center gap-1">
+          <User className="h-5 w-5 text-white/50" />
+          <span className="text-xs font-medium text-white/50">Profile</span>
+        </Link>
+      </nav>
     </div>
   );
 }
