@@ -15,13 +15,38 @@ function getLevel(xp: number): string {
   return "Observer";
 }
 
+/* ── Real countdown to midnight when quiz resets ── */
+function getTimeUntilMidnight(): string {
+  const now = new Date();
+  const midnight = new Date();
+  midnight.setHours(24, 0, 0, 0);
+  const diff = midnight.getTime() - now.getTime();
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  return `${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+}
+
+function useCountdown() {
+  const [timeLeft, setTimeLeft] = useState(getTimeUntilMidnight());
+  useEffect(() => {
+    const t = setInterval(() => setTimeLeft(getTimeUntilMidnight()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return timeLeft;
+}
+
 function HomePage() {
   const [xp, setXp] = useState(0);
   const [loop, setLoop] = useState(0);
+  const [quizDoneToday, setQuizDoneToday] = useState(false);
+  const timeLeft = useCountdown();
 
   useEffect(() => {
     setXp(parseInt(localStorage.getItem("civicloop_xp") || "0"));
     setLoop(parseInt(localStorage.getItem("civicloop_streak") || "0"));
+    const today = new Date().toDateString();
+    setQuizDoneToday(localStorage.getItem("civicloop_completed_quiz") === today);
   }, []);
 
   const level = getLevel(xp);
@@ -52,18 +77,37 @@ function HomePage() {
       </header>
 
       <div className="relative flex flex-col gap-4 px-6">
-        {/* Loop banner */}
+
+        {/* Loop banner with live countdown */}
         <div className="flex items-center justify-between rounded-2xl bg-white/8 border border-white/15 px-4 py-3.5">
           <div className="flex items-center gap-3">
             <span className="text-2xl font-bold" style={{ color: "oklch(0.78 0.18 350)" }}>∞</span>
             <div>
               <p className="text-base font-bold text-white">{loop} Day Loop — Keep it alive!</p>
-              <p className="text-sm font-medium text-white/60">Quiz resets in 6h 22m</p>
+              {quizDoneToday ? (
+                <p className="text-sm font-medium text-white/60">
+                  ✓ Done today · next quiz in{" "}
+                  <span className="font-black text-white/80" style={{ fontVariantNumeric: "tabular-nums" }}>
+                    {timeLeft}
+                  </span>
+                </p>
+              ) : (
+                <p className="text-sm font-medium text-white/60">
+                  Quiz resets in{" "}
+                  <span className="font-black text-white/80" style={{ fontVariantNumeric: "tabular-nums" }}>
+                    {timeLeft}
+                  </span>
+                </p>
+              )}
             </div>
           </div>
           <span
             className="rounded-full border px-3 py-1 text-xs font-bold"
-            style={{ color: "oklch(0.78 0.18 350)", background: "oklch(0.72 0.18 350 / 0.12)", borderColor: "oklch(0.72 0.18 350 / 0.35)" }}
+            style={{
+              color: "oklch(0.78 0.18 350)",
+              background: "oklch(0.72 0.18 350 / 0.12)",
+              borderColor: "oklch(0.72 0.18 350 / 0.35)",
+            }}
           >
             {level}
           </span>
@@ -76,48 +120,80 @@ function HomePage() {
               <h2 className="text-xl font-bold text-white">Today's Quiz</h2>
               <p className="text-sm font-medium text-white/60 mt-0.5">5 questions · ~3 minutes</p>
             </div>
-            <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-white/70">432 done</span>
+            <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-white/70">
+              432 done
+            </span>
           </div>
           <div className="mb-4 flex flex-wrap gap-2">
             {["Ukraine", "Climate", "UK Politics"].map((topic) => (
-              <span key={topic} className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm font-semibold text-white/80">{topic}</span>
+              <span
+                key={topic}
+                className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm font-semibold text-white/80"
+              >
+                {topic}
+              </span>
             ))}
           </div>
-          <Link
-            to="/quiz"
-            className="flex w-full items-center justify-center gap-2 rounded-full py-4 text-base font-bold text-white transition-opacity hover:opacity-90"
-            style={{ background: "oklch(0.72 0.18 350)" }}
-          >
-            Start Today's Quiz →
-          </Link>
+
+          {quizDoneToday ? (
+            <div
+              className="flex w-full items-center justify-center gap-2 rounded-full py-4 text-base font-bold text-white/60 border border-white/15"
+              style={{ background: "rgba(255,255,255,0.05)" }}
+            >
+              ✓ Quiz complete — come back in {timeLeft}
+            </div>
+          ) : (
+            <Link
+              to="/quiz"
+              className="flex w-full items-center justify-center gap-2 rounded-full py-4 text-base font-bold text-white transition-opacity hover:opacity-90"
+              style={{ background: "oklch(0.72 0.18 350)" }}
+            >
+              Start Today's Quiz →
+            </Link>
+          )}
         </div>
 
         {/* Today's Debate teaser */}
         <Link
           to="/debate"
           className="flex items-center gap-3 rounded-2xl border p-4 transition-colors"
-          style={{ background: "oklch(0.72 0.18 350 / 0.06)", borderColor: "oklch(0.72 0.18 350 / 0.25)" }}
+          style={{
+            background: "oklch(0.72 0.18 350 / 0.06)",
+            borderColor: "oklch(0.72 0.18 350 / 0.25)",
+          }}
         >
-          <MessageSquare className="h-6 w-6 flex-shrink-0" style={{ color: "oklch(0.78 0.18 350)" }} />
+          <MessageSquare
+            className="h-6 w-6 flex-shrink-0"
+            style={{ color: "oklch(0.78 0.18 350)" }}
+          />
           <div className="flex-1">
             <p className="text-base font-bold text-white">Today's Debate</p>
-            <p className="text-sm font-medium text-white/60">Should governments regulate AI? Vote + share your view</p>
+            <p className="text-sm font-medium text-white/60">
+              Should governments regulate AI? Vote + share your view
+            </p>
           </div>
           <ChevronRight className="h-5 w-5 flex-shrink-0 text-white/40" />
         </Link>
 
         {/* Continue Learning */}
         <div>
-          <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-white/50">Continue Learning</h3>
+          <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-white/50">
+            Continue Learning
+          </h3>
           <Link
             to="/history"
             className="flex items-center justify-between rounded-2xl bg-white/8 border border-white/15 p-4 transition-colors hover:bg-white/12"
           >
             <div className="flex-1">
               <p className="text-base font-bold text-white">The French Revolution</p>
-              <p className="text-sm font-medium text-white/60 mt-0.5">7 chapters · Quiz · Order · Decide</p>
+              <p className="text-sm font-medium text-white/60 mt-0.5">
+                7 chapters · Quiz · Order · Decide
+              </p>
               <div className="mt-2.5 h-2 w-full rounded-full bg-white/10">
-                <div className="h-2 rounded-full" style={{ width: "14%", background: "oklch(0.72 0.18 350)" }} />
+                <div
+                  className="h-2 rounded-full"
+                  style={{ width: "14%", background: "oklch(0.72 0.18 350)" }}
+                />
               </div>
             </div>
             <ChevronRight className="ml-4 h-5 w-5 flex-shrink-0 text-white/40" />
