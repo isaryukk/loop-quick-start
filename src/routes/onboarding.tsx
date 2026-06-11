@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { supabaseRest } from "../lib/supabase";
 
 export const Route = createFileRoute("/onboarding")({
   component: OnboardingPage,
@@ -28,15 +29,40 @@ function OnboardingPage() {
 
   const canProceedStep0 = username.trim().length >= 2;
 
-  const finish = () => {
+  const finish = async () => {
     const tag = customFocus.trim()
       ? customFocus.trim().startsWith("#") ? customFocus.trim() : "#" + customFocus.trim()
       : focusTag;
+
     const profile = { username: username.trim() || "Scholar", avatar, focusTag: tag, friends: [] };
+
     try {
       localStorage.setItem("civicloop_profile", JSON.stringify(profile));
       localStorage.setItem("civicloop_onboarded", "true");
-    } catch {}
+
+      const userId = await supabaseRest.currentUserId();
+
+      if (userId) {
+        await supabaseRest.upsertProfile({
+          id: userId,
+          username: profile.username,
+          avatar: profile.avatar,
+          focus_tag: profile.focusTag,
+          friends: profile.friends,
+        });
+
+        await supabaseRest.upsertStats({
+          user_id: userId,
+          xp: parseInt(localStorage.getItem("civicloop_xp") || "0"),
+          streak: parseInt(localStorage.getItem("civicloop_streak") || "0"),
+          last_quiz_date: localStorage.getItem("civicloop_completed_quiz"),
+          quiz_history: JSON.parse(localStorage.getItem("civicloop_quiz_history") || "[]"),
+        });
+      }
+    } catch {
+      // Keep onboarding working even if Supabase is unavailable.
+    }
+
     navigate({ to: "/home" });
   };
 
@@ -56,14 +82,14 @@ function OnboardingPage() {
           ))}
         </div>
 
-        {/* Step 0 — Username */}
+        {/* Step 0 - Username */}
         {step === 0 && (
           <div className="flex flex-col flex-1">
             <div className="mb-8">
               <p className="text-5xl mb-5">∞</p>
               <h1 className="text-4xl font-black text-white mb-3 leading-tight">Welcome to<br />CivicLoop</h1>
               <p className="text-white/80 font-bold text-base leading-relaxed">
-                Build your political literacy one day at a time. Daily quizzes, history deep-dives, and live debates — all in under 5 minutes.
+                Build your political literacy one day at a time. Daily quizzes, history deep-dives, and live debates - all in under 5 minutes.
               </p>
             </div>
             <div className="mb-6">
@@ -71,7 +97,7 @@ function OnboardingPage() {
               <input
                 className="w-full rounded-2xl border border-white/20 bg-white/8 px-4 py-4 text-white text-base font-black outline-none placeholder-white/30"
                 style={{ caretColor: "oklch(0.78 0.18 350)" }}
-                placeholder="e.g. PolicyNerd, GlobalThinker…"
+                placeholder="e.g. PolicyNerd, GlobalThinker..."
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && canProceedStep0 && setStep(1)}
@@ -88,7 +114,7 @@ function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 1 — Avatar */}
+        {/* Step 1 - Avatar */}
         {step === 1 && (
           <div className="flex flex-col flex-1">
             <div className="mb-6">
@@ -120,7 +146,7 @@ function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 2 — Focus + Finish */}
+        {/* Step 2 - Focus + Finish */}
         {step === 2 && (
           <div className="flex flex-col flex-1">
             <div className="mb-6">
@@ -177,3 +203,4 @@ function OnboardingPage() {
     </main>
   );
 }
+
