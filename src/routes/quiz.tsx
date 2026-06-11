@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Home, BookOpen, MessageSquare, User, Loader2, ChevronDown, ChevronUp,
 } from "lucide-react";
+import { supabaseRest } from "../lib/supabase";
 
 export const Route = createFileRoute("/quiz")({
   component: QuizPage,
@@ -63,7 +64,30 @@ function getDailyFallback(): Question[] {
 }
 
 const TODAY = new Date().toDateString();
+const TODAY_ISO = formatDateForSupabase(new Date());
 const CACHE_KEY = `civicloop_quiz_${TODAY}`;
+
+function formatDateForSupabase(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function dateValueToLocalDateString(value: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split("-").map(Number);
+    return new Date(y, m - 1, d).toDateString();
+  }
+  return new Date(value).toDateString();
+}
+
+function dateValueToSupabaseDate(value: string): string | null {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return formatDateForSupabase(d);
+}
 
 function recordCompletionInHistory() {
   try {
@@ -73,6 +97,40 @@ function recordCompletionInHistory() {
       localStorage.setItem("civicloop_quiz_history", JSON.stringify(history));
     }
   } catch {}
+}
+
+function loadQuizHistory(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem("civicloop_quiz_history") || "[]");
+  } catch {
+    return [];
+  }
+}
+
+async function saveQuizProgressToSupabase(score: number, xpEarned: number, streak: number) {
+  try {
+    const userId = await supabaseRest.currentUserId();
+    if (!userId) return;
+
+    const currentStats = await supabaseRest.getStats(userId);
+    const remoteXp = currentStats.data?.[0]?.xp ?? 0;
+    const localXp = parseInt(localStorage.getItem("civicloop_xp") || "0");
+    const quizHistory = loadQuizHistory()
+      .map(dateValueToSupabaseDate)
+      .filter((date): date is string => Boolean(date));
+
+    if (!quizHistory.includes(TODAY_ISO)) quizHistory.push(TODAY_ISO);
+
+    await supabaseRest.upsertStats({
+      user_id: userId,
+      xp: Math.max(remoteXp + xpEarned, localXp),
+      streak,
+      last_quiz_date: TODAY_ISO,
+      quiz_history: quizHistory,
+    });
+  } catch {
+    // Local progress has already been saved, so the quiz should not fail here.
+  }
 }
 
 function getThisWeekKey(): string {
@@ -169,12 +227,38 @@ function QuizPage() {
     let live = true;
     const completed = localStorage.getItem("civicloop_completed_quiz");
     const score = parseInt(localStorage.getItem("civicloop_last_score") || "0");
-    loadQuestions().then((qs) => {
+    async function loadPage() {
+      const qs = await loadQuestions();
       if (!live) return;
+
+      try {
+        const userId = await supabaseRest.currentUserId();
+        if (userId) {
+          const statsResult = await supabaseRest.getStats(userId);
+          const remoteStats = statsResult.data?.[0];
+          if (remoteStats) {
+            localStorage.setItem("civicloop_xp", String(remoteStats.xp));
+            localStorage.setItem("civicloop_streak", String(remoteStats.streak));
+            if (remoteStats.last_quiz_date) {
+              localStorage.setItem("civicloop_completed_quiz", dateValueToLocalDateString(remoteStats.last_quiz_date));
+            }
+            if (remoteStats.quiz_history) {
+              localStorage.setItem(
+                "civicloop_quiz_history",
+                JSON.stringify(remoteStats.quiz_history.map(dateValueToLocalDateString))
+              );
+            }
+          }
+        }
+      } catch {}
+
+      const latestCompleted = localStorage.getItem("civicloop_completed_quiz") || completed;
+      const latestScore = parseInt(localStorage.getItem("civicloop_last_score") || String(score));
       setQuestions(qs);
-      if (completed === TODAY) { setSavedScore(score); setAlreadyDone(true); }
+      if (latestCompleted === TODAY) { setSavedScore(latestScore); setAlreadyDone(true); }
       setLoading(false);
-    });
+    }
+    loadPage();
     return () => { live = false; };
   }, []);
 
@@ -191,7 +275,7 @@ function QuizPage() {
     if (selected === null || !q) return;
     const isLast = currentQ + 1 >= questions.length;
     if (isLast) {
-      const score = correctCount;
+      const score = correctCount + (selected === q.correctAnswer ? 1 : 0);
       const xp = 50 + (score === questions.length ? 25 : 0);
       localStorage.setItem("civicloop_xp", String(parseInt(localStorage.getItem("civicloop_xp") || "0") + xp));
       const currentStreak = parseInt(localStorage.getItem("civicloop_streak") || "0");
@@ -207,6 +291,7 @@ function QuizPage() {
       localStorage.setItem("civicloop_completed_quiz", TODAY);
       localStorage.setItem("civicloop_last_score", String(score));
       recordCompletionInHistory();
+      saveQuizProgressToSupabase(score, xp, newStreak);
       navigate({ to: "/quiz-results" });
     } else {
       setCurrentQ((n) => n + 1);
@@ -326,3 +411,4 @@ function QuizPage() {
     </main>
   );
 }
+
