@@ -1,0 +1,21 @@
+{
+  "name": "CivicLoop",
+  "short_name": "CivicLoop",
+  "description": "Build your political literacy in 5 minutes a day. Daily quizzes, history deep-dives, and live debates.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#c45c7c",
+  "theme_color": "#c45c7c",
+  "categories": ["education", "news"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
