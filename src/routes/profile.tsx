@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Home, BookOpen, MessageSquare, User } from "lucide-react";
+import { supabaseRest } from "../lib/supabase";
 
 export const Route = createFileRoute("/profile")({
   component: ProfilePage,
-  head: () => ({ meta: [{ title: "CivicLoop — Profile" }] }),
+  head: () => ({ meta: [{ title: "CivicLoop - Profile" }] }),
 });
 
 const AVATARS = [
@@ -28,19 +29,30 @@ type ProfileData = {
   friends: string[];
 };
 
+type StatsData = {
+  xp: number;
+  streak: number;
+};
+
 function loadProfile(): ProfileData {
   try {
     const raw = localStorage.getItem("civicloop_profile");
     if (raw) return JSON.parse(raw);
-  } catch { /* ok */ }
+  } catch {
+    /* ok */
+  }
   return { username: "Scholar", avatar: "📚", focusTag: "#FrenchRevolution", friends: [] };
 }
 
 function saveProfile(data: ProfileData) {
-  try { localStorage.setItem("civicloop_profile", JSON.stringify(data)); } catch { /* ok */ }
+  try {
+    localStorage.setItem("civicloop_profile", JSON.stringify(data));
+  } catch {
+    /* ok */
+  }
 }
 
-function loadStats() {
+function loadStats(): StatsData {
   try {
     return {
       xp: parseInt(localStorage.getItem("civicloop_xp") || "0"),
@@ -51,17 +63,26 @@ function loadStats() {
   }
 }
 
-/* ── Build a 28-day calendar grid ── */
+function saveStats(data: StatsData) {
+  try {
+    localStorage.setItem("civicloop_xp", String(data.xp));
+    localStorage.setItem("civicloop_streak", String(data.streak));
+  } catch {
+    /* ok */
+  }
+}
+
 function buildCalendar() {
   let history: string[] = [];
   try {
     history = JSON.parse(localStorage.getItem("civicloop_quiz_history") || "[]");
-    // Also include today if quiz was completed today
     const today = new Date().toDateString();
     if (localStorage.getItem("civicloop_completed_quiz") === today && !history.includes(today)) {
       history.push(today);
     }
-  } catch { /* ok */ }
+  } catch {
+    /* ok */
+  }
 
   const today = new Date();
   const days: { dateStr: string; completed: boolean; isToday: boolean; dayOfWeek: number }[] = [];
@@ -74,13 +95,12 @@ function buildCalendar() {
       dateStr,
       completed: history.includes(dateStr),
       isToday: i === 0,
-      dayOfWeek: d.getDay(), // 0=Sun
+      dayOfWeek: d.getDay(),
     });
   }
   return days;
 }
 
-/* ── Streak Calendar Component ── */
 function StreakCalendar() {
   const [days, setDays] = useState(() => buildCalendar());
 
@@ -88,15 +108,8 @@ function StreakCalendar() {
     setDays(buildCalendar());
   }, []);
 
-  // Find the day of week of the first day to add offset
-  const firstDayOfWeek = days[0].dayOfWeek === 0 ? 6 : days[0].dayOfWeek - 1; // Mon=0
-
-  // Pad the start so the grid aligns to Monday
-  const padded = [
-    ...Array(firstDayOfWeek).fill(null),
-    ...days,
-  ];
-
+  const firstDayOfWeek = days[0].dayOfWeek === 0 ? 6 : days[0].dayOfWeek - 1;
+  const padded = [...Array(firstDayOfWeek).fill(null), ...days];
   const completedCount = days.filter((d) => d.completed).length;
 
   return (
@@ -105,19 +118,15 @@ function StreakCalendar() {
         <p className="text-white/40 text-xs font-black uppercase tracking-widest">
           28-Day Streak Calendar
         </p>
-        <span className="text-xs font-black text-white/50">
-          {completedCount}/28 days
-        </span>
+        <span className="text-xs font-black text-white/50">{completedCount}/28 days</span>
       </div>
 
-      {/* Day labels */}
       <div className="grid grid-cols-7 gap-1 mb-1">
         {DAY_LABELS.map((d, i) => (
           <div key={i} className="text-center text-white/25 text-xs font-bold">{d}</div>
         ))}
       </div>
 
-      {/* Calendar squares */}
       <div className="grid grid-cols-7 gap-1">
         {padded.map((day, i) =>
           day === null ? (
@@ -127,15 +136,9 @@ function StreakCalendar() {
               key={day.dateStr}
               className="aspect-square rounded-md transition-all"
               style={{
-                background: day.completed
-                  ? "oklch(0.72 0.18 350)"
-                  : "rgba(255,255,255,0.06)",
-                border: day.isToday
-                  ? "1.5px solid oklch(0.78 0.18 350)"
-                  : "1.5px solid transparent",
-                boxShadow: day.completed
-                  ? "0 0 6px oklch(0.72 0.18 350 / 0.4)"
-                  : "none",
+                background: day.completed ? "oklch(0.72 0.18 350)" : "rgba(255,255,255,0.06)",
+                border: day.isToday ? "1.5px solid oklch(0.78 0.18 350)" : "1.5px solid transparent",
+                boxShadow: day.completed ? "0 0 6px oklch(0.72 0.18 350 / 0.4)" : "none",
               }}
               title={`${day.dateStr}${day.completed ? " ✓" : ""}`}
             />
@@ -154,17 +157,79 @@ function StreakCalendar() {
   );
 }
 
-/* ── Main Page ── */
 function ProfilePage() {
   const [profile, setProfile] = useState<ProfileData>(loadProfile);
-  const [stats] = useState(loadStats);
+  const [stats, setStats] = useState<StatsData>(loadStats);
+  const [userId, setUserId] = useState<string | null>(null);
   const [editing, setEditing] = useState<"username" | "focus" | "avatar" | null>(null);
   const [draftUsername, setDraftUsername] = useState(profile.username);
   const [draftFocus, setDraftFocus] = useState(profile.focusTag);
   const [friendInput, setFriendInput] = useState("");
   const [friendError, setFriendError] = useState("");
 
-  useEffect(() => { saveProfile(profile); }, [profile]);
+  useEffect(() => {
+    let live = true;
+
+    async function loadFromSupabase() {
+      const id = await supabaseRest.currentUserId();
+      if (!live || !id) return;
+      setUserId(id);
+
+      const profileResult = await supabaseRest.getProfile(id);
+      const remoteProfile = profileResult.data?.[0];
+      if (remoteProfile && live) {
+        const nextProfile = {
+          username: remoteProfile.username,
+          avatar: remoteProfile.avatar,
+          focusTag: remoteProfile.focus_tag,
+          friends: remoteProfile.friends || [],
+        };
+        setProfile(nextProfile);
+        setDraftUsername(nextProfile.username);
+        setDraftFocus(nextProfile.focusTag);
+        saveProfile(nextProfile);
+      }
+
+      const statsResult = await supabaseRest.getStats(id);
+      const remoteStats = statsResult.data?.[0];
+      if (remoteStats && live) {
+        const nextStats = {
+          xp: remoteStats.xp,
+          streak: remoteStats.streak,
+        };
+        setStats(nextStats);
+        saveStats(nextStats);
+        if (remoteStats.last_quiz_date) {
+          localStorage.setItem("civicloop_completed_quiz", new Date(remoteStats.last_quiz_date).toDateString());
+        }
+        if (remoteStats.quiz_history) {
+          localStorage.setItem(
+            "civicloop_quiz_history",
+            JSON.stringify(remoteStats.quiz_history.map((date) => new Date(date).toDateString()))
+          );
+        }
+      }
+    }
+
+    loadFromSupabase();
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    saveProfile(profile);
+
+    if (!userId) return;
+
+    supabaseRest.upsertProfile({
+      id: userId,
+      username: profile.username,
+      avatar: profile.avatar,
+      focus_tag: profile.focusTag,
+      friends: profile.friends,
+    });
+  }, [profile, userId]);
 
   const difficulty =
     stats.xp >= 800 ? "advanced" : stats.xp >= 300 ? "intermediate" : "beginner";
@@ -226,21 +291,17 @@ function ProfilePage() {
 
   return (
     <main className="relative min-h-screen overflow-y-auto bg-background px-6 pt-10 pb-32 text-white">
-
-      {/* Glow */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute top-0 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full opacity-20 blur-3xl"
         style={{ background: "radial-gradient(circle, oklch(0.72 0.18 350) 0%, transparent 70%)" }}
       />
 
-      {/* Header */}
       <div className="relative mb-6">
         <h1 className="text-3xl font-black">Profile</h1>
         <p className="text-white/60 font-bold">Your identity and progress</p>
       </div>
 
-      {/* ── Avatar + Username ── */}
       <div className="relative rounded-3xl border border-white/20 bg-white/8 p-5 mb-4">
         <div className="flex items-center gap-4 mb-4">
           <button
@@ -321,7 +382,6 @@ function ProfilePage() {
         )}
       </div>
 
-      {/* ── Focus hashtag ── */}
       <div className="relative rounded-3xl border border-white/20 bg-white/8 p-5 mb-4">
         <p className="text-white/40 text-xs font-black uppercase tracking-widest mb-3">
           Current Focus
@@ -367,12 +427,10 @@ function ProfilePage() {
         )}
       </div>
 
-      {/* ── Streak Calendar ── */}
       <div className="relative rounded-3xl border border-white/20 bg-white/8 p-5 mb-4">
         <StreakCalendar />
       </div>
 
-      {/* ── Stats ── */}
       <div className="relative rounded-3xl border border-white/20 bg-white/8 p-5 mb-4">
         <p className="text-white/40 text-xs font-black uppercase tracking-widest mb-4">
           Your Stats
@@ -410,7 +468,6 @@ function ProfilePage() {
         )}
       </div>
 
-      {/* ── Friends ── */}
       <div className="relative rounded-3xl border border-white/20 bg-white/8 p-5 mb-4">
         <p className="text-white/40 text-xs font-black uppercase tracking-widest mb-4">
           Friends
@@ -441,7 +498,7 @@ function ProfilePage() {
 
         {profile.friends.length === 0 ? (
           <p className="text-white/25 font-bold text-sm text-center py-5">
-            No friends added yet — type a username above.
+            No friends added yet - type a username above.
           </p>
         ) : (
           <div className="space-y-2">
@@ -468,21 +525,19 @@ function ProfilePage() {
         )}
       </div>
 
-      {/* ── Coming soon ── */}
       <div className="relative rounded-3xl border border-white/10 bg-white/5 p-5 opacity-50 mb-4">
         <p className="text-white/40 text-xs font-black uppercase tracking-widest mb-3">
           Coming Soon
         </p>
         <div className="space-y-2 text-sm text-white/50 font-semibold">
-          <p>📊 Accuracy breakdown by topic — Politics, Economics, Military</p>
+          <p>📊 Accuracy breakdown by topic - Politics, Economics, Military</p>
           <p>🏅 Seasonal rankings and debate ELO score</p>
-          <p>📈 Adaptive difficulty — harder questions in your weak areas</p>
+          <p>📈 Adaptive difficulty - harder questions in your weak areas</p>
           <p>🔥 Streak rewards and daily XP multipliers</p>
           <p>👥 Friend activity feed and head-to-head quiz challenges</p>
         </div>
       </div>
 
-      {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-20 flex items-center justify-around border-t border-white/10 bg-background pb-6 pt-3">
         <Link to="/home" className="flex flex-col items-center gap-1">
           <Home className="h-5 w-5 text-white/50" />
@@ -504,3 +559,5 @@ function ProfilePage() {
     </main>
   );
 }
+
+
