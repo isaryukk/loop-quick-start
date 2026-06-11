@@ -1,3 +1,4 @@
+```tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -38,6 +39,7 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
+
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center bg-background px-6 text-white">
       <div
@@ -51,15 +53,20 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <p className="text-white/70 font-bold text-sm mb-8">
           A page failed to load. Try again or head back home.
         </p>
+
         <div className="flex flex-col gap-3 max-w-xs mx-auto">
           <button
-            onClick={() => { router.invalidate(); reset(); }}
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
             className="w-full py-4 rounded-full font-black text-white text-base"
             style={{ background: "oklch(0.72 0.18 350)" }}
           >
             Try again
           </button>
-          
+
+          <a
             href="/"
             className="w-full py-4 rounded-full font-black text-white/70 text-base border border-white/20 bg-white/8 text-center"
           >
@@ -118,9 +125,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
     </QueryClientProvider>
   );
 }
+```
